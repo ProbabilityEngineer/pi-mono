@@ -37,7 +37,11 @@ const lspSchema = Type.Object({
 	file: Type.Optional(Type.String({ description: "File path for file-based operations" })),
 	line: Type.Optional(Type.Number({ description: "1-indexed line number (default: 1)" })),
 	column: Type.Optional(Type.Number({ description: "1-indexed column number (default: 1)" })),
-	query: Type.Optional(Type.String({ description: "Workspace symbol query (required when symbols has no file)" })),
+	query: Type.Optional(
+		Type.String({
+			description: "Symbol query (required for workspace symbols, optional filter for document symbols)",
+		}),
+	),
 	include_declaration: Type.Optional(
 		Type.Boolean({ description: "Include declaration in references (default: true)" }),
 	),
@@ -68,30 +72,120 @@ function formatLocation(location: Location, cwd: string): string {
 	return `${filePath}:${line}:${column}`;
 }
 
-function collectDocumentSymbols(symbol: DocumentSymbol, depth: number, output: string[]): void {
-	const indent = "  ".repeat(depth);
+interface FlattenedDocumentSymbol {
+	name: string;
+	line: number;
+	depth: number;
+	qualifiedName: string;
+}
+
+function flattenDocumentSymbols(
+	symbol: DocumentSymbol,
+	depth: number,
+	parentPath: string[],
+	output: FlattenedDocumentSymbol[],
+): void {
 	const line = symbol.selectionRange.start.line + 1;
-	output.push(`${indent}${symbol.name} (line ${line})`);
+	const qualifiedParts = [...parentPath, symbol.name];
+	output.push({
+		name: symbol.name,
+		line,
+		depth,
+		qualifiedName: qualifiedParts.join("."),
+	});
 	for (const child of symbol.children ?? []) {
-		collectDocumentSymbols(child, depth + 1, output);
+		flattenDocumentSymbols(child, depth + 1, qualifiedParts, output);
 	}
 }
 
-function formatDocumentSymbolOutput(symbols: Array<DocumentSymbol | SymbolInformation>, cwd: string): string[] {
+function matchScore(value: string, query: string): number | null {
+	const candidate = value.toLowerCase();
+	if (candidate === query) {
+		return 0;
+	}
+	if (candidate.startsWith(query)) {
+		return 1;
+	}
+	const boundaryTokens = [".", "/", ":", "_", "-", " "];
+	for (const token of boundaryTokens) {
+		if (candidate.includes(`${token}${query}`)) {
+			return 2;
+		}
+	}
+	if (candidate.includes(query)) {
+		return 3;
+	}
+	return null;
+}
+
+function rankAndFilterByQuery<T>(items: T[], query: string | undefined, valuesForItem: (item: T) => string[]): T[] {
+	const normalizedQuery = query?.trim().toLowerCase() ?? "";
+	if (normalizedQuery.length === 0) {
+		return items;
+	}
+
+	return items
+		.map((item, index) => {
+			let bestScore: number | null = null;
+			let bestLength = Number.POSITIVE_INFINITY;
+			for (const value of valuesForItem(item)) {
+				const score = matchScore(value, normalizedQuery);
+				if (score === null) {
+					continue;
+				}
+				if (bestScore === null || score < bestScore) {
+					bestScore = score;
+					bestLength = value.length;
+					continue;
+				}
+				if (score === bestScore && value.length < bestLength) {
+					bestLength = value.length;
+				}
+			}
+			return { item, index, score: bestScore, length: bestLength };
+		})
+		.filter((entry): entry is { item: T; index: number; score: number; length: number } => entry.score !== null)
+		.sort((left, right) => {
+			if (left.score !== right.score) {
+				return left.score - right.score;
+			}
+			if (left.length !== right.length) {
+				return left.length - right.length;
+			}
+			return left.index - right.index;
+		})
+		.map((entry) => entry.item);
+}
+
+function formatDocumentSymbolOutput(
+	symbols: Array<DocumentSymbol | SymbolInformation>,
+	cwd: string,
+	query?: string,
+): string[] {
 	if (symbols.length === 0) {
 		return [];
 	}
 
 	const first = symbols[0];
 	if ("selectionRange" in first) {
-		const output: string[] = [];
+		const flattened: FlattenedDocumentSymbol[] = [];
 		for (const symbol of symbols as DocumentSymbol[]) {
-			collectDocumentSymbols(symbol, 0, output);
+			flattenDocumentSymbols(symbol, 0, [], flattened);
 		}
-		return output;
+		const filtered = rankAndFilterByQuery(flattened, query, (symbol) => [symbol.name, symbol.qualifiedName]);
+		if (query && filtered.length === 0) {
+			return [];
+		}
+		const selected = query ? filtered : flattened;
+		return selected.map((symbol) => `${"  ".repeat(symbol.depth)}${symbol.name} (line ${symbol.line})`);
 	}
 
-	return (symbols as SymbolInformation[]).map((symbol) => {
+	const filtered = rankAndFilterByQuery(symbols as SymbolInformation[], query, (symbol) => [
+		symbol.name,
+		symbol.containerName ?? "",
+	]);
+	const selected = query ? filtered : (symbols as SymbolInformation[]);
+	return selected.map((symbol) => {
 		const line = symbol.location.range.start.line + 1;
 		const pathText = formatLocation(symbol.location, cwd);
 		return `${symbol.name} (line ${line}) - ${pathText}`;
@@ -103,7 +197,7 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 		name: "lsp",
 		label: "lsp",
 		description:
-			"Run LSP operations (hover, definition, references, symbols, diagnostics, rename, format) using configured language servers.",
+			"Run LSP operations (hover, definition, references, symbols, diagnostics, rename, format) using configured language servers. definition/references/hover are position-based (file+line+column); use symbols first when you only have a name.",
 		parameters: lspSchema,
 		execute: async (
 			_toolCallId: string,
@@ -267,10 +361,12 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 						filePath: resolveToCwd(file, cwd),
 						signal,
 					});
-					const formatted = formatDocumentSymbolOutput(result.symbols, cwd);
+					const formatted = formatDocumentSymbolOutput(result.symbols, cwd, query);
 					if (formatted.length === 0) {
 						return {
-							content: [{ type: "text", text: "No symbols found." }],
+							content: [
+								{ type: "text", text: query ? `No symbols found for "${query}".` : "No symbols found." },
+							],
 							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
 						};
 					}
@@ -288,7 +384,11 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 				}
 
 				const result = await lspWorkspaceSymbols({ cwd, query, signal });
-				if (result.symbols.length === 0) {
+				const filteredSymbols = rankAndFilterByQuery(result.symbols, query, (symbol) => [
+					symbol.name,
+					symbol.containerName ?? "",
+				]);
+				if (filteredSymbols.length === 0) {
 					return {
 						content: [{ type: "text", text: `No workspace symbols found for "${query}".` }],
 						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
@@ -298,7 +398,7 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 					content: [
 						{
 							type: "text",
-							text: result.symbols
+							text: filteredSymbols
 								.map((symbol) => `- ${symbol.name} (${formatLocation(symbol.location, cwd)})`)
 								.join("\n"),
 						},
