@@ -1,3 +1,4 @@
+import type { SpawnSyncReturns } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,6 +16,18 @@ function createTempDir(): string {
 	const dir = mkdtempSync(join(tmpdir(), "lsp-config-win-test-"));
 	createdDirs.push(dir);
 	return dir;
+}
+
+function createSpawnResult(overrides: Partial<SpawnSyncReturns<Buffer>> = {}): SpawnSyncReturns<Buffer> {
+	return {
+		pid: 1,
+		output: [null, Buffer.alloc(0), Buffer.alloc(0)],
+		stdout: Buffer.alloc(0),
+		stderr: Buffer.alloc(0),
+		status: 0,
+		signal: null,
+		...overrides,
+	};
 }
 
 afterEach(() => {
@@ -42,7 +55,7 @@ describe("lsp windows command resolution", () => {
 		const commandPath = join(binDir, "pyright-langserver.cmd");
 		writeFileSync(commandPath, "@echo off\r\necho ok\r\n");
 
-		const probeRunner = vi.fn(() => ({ error: null }));
+		const probeRunner = vi.fn(() => createSpawnResult({ error: undefined }));
 		const available = isCommandAvailable("pyright-langserver", createTempDir(), {
 			platform: "win32",
 			envPath: binDir,
@@ -60,7 +73,7 @@ describe("lsp windows command resolution", () => {
 		writeFileSync(commandPath, "@echo off\r\necho ok\r\n");
 
 		const err = Object.assign(new Error("spawn failed"), { code: "ENOENT" });
-		const probeRunner = vi.fn(() => ({ error: err }));
+		const probeRunner = vi.fn(() => createSpawnResult({ error: err, status: null }));
 		const available = isCommandAvailable("gopls", createTempDir(), {
 			platform: "win32",
 			envPath: binDir,
@@ -72,9 +85,12 @@ describe("lsp windows command resolution", () => {
 	});
 
 	it("treats ETIMEDOUT probe errors as available", () => {
-		const runner: CommandProbeRunner = () => ({
-			error: Object.assign(new Error("timed out"), { code: "ETIMEDOUT" }),
-		});
+		const runner: CommandProbeRunner = () =>
+			createSpawnResult({
+				error: Object.assign(new Error("timed out"), { code: "ETIMEDOUT" }),
+				status: null,
+				signal: "SIGTERM",
+			});
 		const available = probeCommandInvocation("typescript-language-server", createTempDir(), runner);
 		expect(available).toBe(true);
 	});
