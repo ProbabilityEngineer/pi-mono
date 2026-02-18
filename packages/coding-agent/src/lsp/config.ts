@@ -1,8 +1,8 @@
-import { type SpawnSyncOptions, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { globSync } from "glob";
 import DEFAULTS from "./defaults.json";
+import { type CommandProbeResult, type CommandProbeRunner, runCommandProbe } from "./probe.js";
 import type { LspConfigFile, LspServerDefinition, ResolvedLspServer } from "./types.js";
 
 const LOCAL_BIN_PATHS: Array<{ markers: string[]; binDir: string }> = [
@@ -21,12 +21,6 @@ export interface ResolveCommandOnPathOptions {
 	pathExt?: string;
 	exists?: (path: string) => boolean;
 }
-
-export type CommandProbeRunner = (
-	command: string,
-	args: string[],
-	options: SpawnSyncOptions,
-) => { error?: Error | null };
 
 export interface CommandAvailabilityOptions {
 	platform?: NodeJS.Platform;
@@ -158,27 +152,52 @@ export function resolveCommandOnPath(command: string, options: ResolveCommandOnP
 export function probeCommandInvocation(
 	commandPath: string,
 	cwd: string,
-	commandProbeRunner: CommandProbeRunner = spawnSync,
+	commandProbeRunner?: CommandProbeRunner,
 ): boolean {
-	const result = commandProbeRunner(commandPath, ["--version"], {
+	const result = probeCommandInvocationWithContract(
+		commandPath,
 		cwd,
-		env: process.env,
-		windowsHide: true,
-		stdio: "ignore",
-		timeout: COMMAND_PROBE_TIMEOUT_MS,
-	});
-	const error = result.error as NodeJS.ErrnoException | undefined;
-	if (!error) {
+		getDefaultCommandProbeContract(),
+		commandProbeRunner,
+	);
+	if (result.timedOut) {
 		return true;
 	}
+	return result.available;
+}
 
-	if (error.code === "ENOENT" || error.code === "EACCES") {
-		return false;
-	}
+export interface CommandProbeContract {
+	timeoutMs: number;
+	acceptableErrorCodes: string[];
+	successExitCodes: number[];
+}
 
-	// ETIMEDOUT and other spawn errors still mean the executable resolved
-	// and attempted to launch, which is sufficient for availability checks.
-	return true;
+export function getDefaultCommandProbeContract(): CommandProbeContract {
+	return {
+		timeoutMs: COMMAND_PROBE_TIMEOUT_MS,
+		acceptableErrorCodes: ["ETIMEDOUT"],
+		successExitCodes: [0],
+	};
+}
+
+export function probeCommandInvocationWithContract(
+	commandPath: string,
+	cwd: string,
+	contract: CommandProbeContract,
+	commandProbeRunner?: CommandProbeRunner,
+): CommandProbeResult {
+	return runCommandProbe(
+		{
+			command: commandPath,
+			args: ["--version"],
+			cwd,
+			timeoutMs: contract.timeoutMs,
+			windowsHide: true,
+			acceptableErrorCodes: contract.acceptableErrorCodes,
+			successExitCodes: contract.successExitCodes,
+		},
+		commandProbeRunner,
+	);
 }
 
 export function isCommandAvailable(command: string, cwd: string, options: CommandAvailabilityOptions = {}): boolean {
@@ -235,3 +254,5 @@ export function getServersForLanguage(languageId: string, cwd: string): Resolved
 		.filter((server) => server.languages.includes(languageId))
 		.sort((a, b) => a.name.localeCompare(b.name));
 }
+
+export type { CommandProbeResult, CommandProbeRunner };
