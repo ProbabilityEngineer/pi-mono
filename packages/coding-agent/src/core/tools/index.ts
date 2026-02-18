@@ -10,12 +10,14 @@ export {
 } from "./bash.js";
 export {
 	createEditTool,
+	type EditMode,
 	type EditOperations,
 	type EditToolDetails,
 	type EditToolInput,
 	type EditToolOptions,
 	editTool,
 } from "./edit.js";
+export { applyHashlineEdits, computeLineHash, formatHashLines, parseLineRef, type HashlineEditOperation } from "./hashline.js";
 export {
 	createFindTool,
 	type FindOperations,
@@ -68,7 +70,7 @@ export {
 
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { type BashToolOptions, bashTool, createBashTool } from "./bash.js";
-import { createEditTool, editTool } from "./edit.js";
+import { createEditTool, type EditToolOptions, editTool } from "./edit.js";
 import { createFindTool, findTool } from "./find.js";
 import { createGrepTool, grepTool } from "./grep.js";
 import { createLsTool, lsTool } from "./ls.js";
@@ -102,6 +104,8 @@ export interface ToolsOptions {
 	read?: ReadToolOptions;
 	/** Options for the bash tool */
 	bash?: BashToolOptions;
+	/** Options for the edit tool */
+	edit?: EditToolOptions;
 }
 
 /**
@@ -111,7 +115,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
 	return [
 		createReadTool(cwd, options?.read),
 		createBashTool(cwd, options?.bash),
-		createEditTool(cwd),
+		createEditTool(cwd, options?.edit),
 		createWriteTool(cwd),
 	];
 }
@@ -130,7 +134,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 	return {
 		read: createReadTool(cwd, options?.read),
 		bash: createBashTool(cwd, options?.bash),
-		edit: createEditTool(cwd),
+		edit: createEditTool(cwd, options?.edit),
 		write: createWriteTool(cwd),
 		grep: createGrepTool(cwd),
 		find: createFindTool(cwd),

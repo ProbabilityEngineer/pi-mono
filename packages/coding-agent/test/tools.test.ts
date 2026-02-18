@@ -3,11 +3,12 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bashTool, createBashTool } from "../src/core/tools/bash.js";
-import { editTool } from "../src/core/tools/edit.js";
+import { createEditTool, editTool } from "../src/core/tools/edit.js";
 import { findTool } from "../src/core/tools/find.js";
 import { grepTool } from "../src/core/tools/grep.js";
+import { computeLineHash } from "../src/core/tools/hashline.js";
 import { lsTool } from "../src/core/tools/ls.js";
-import { readTool } from "../src/core/tools/read.js";
+import { createReadTool, readTool } from "../src/core/tools/read.js";
 import { writeTool } from "../src/core/tools/write.js";
 import * as shellModule from "../src/utils/shell.js";
 
@@ -155,6 +156,18 @@ describe("Coding Agent Tools", () => {
 			expect(result.details?.truncation?.outputLines).toBe(2000);
 		});
 
+		it("should prefix text lines with hashline references when enabled", async () => {
+			const testFile = join(testDir, "hashline-read.txt");
+			writeFileSync(testFile, "alpha\nbeta");
+			const hashlineReadTool = createReadTool(testDir, { hashLines: true });
+
+			const result = await hashlineReadTool.execute("test-call-hash-read", { path: testFile });
+			const output = getTextOutput(result);
+
+			expect(output).toContain(`1:${computeLineHash(1, "alpha")}|alpha`);
+			expect(output).toContain(`2:${computeLineHash(2, "beta")}|beta`);
+		});
+
 		it("should detect image MIME type from file magic (not extension)", async () => {
 			const png1x1Base64 =
 				"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X2Z0AAAAASUVORK5CYII=";
@@ -256,6 +269,33 @@ describe("Coding Agent Tools", () => {
 					newText: "bar",
 				}),
 			).rejects.toThrow(/Found 3 occurrences/);
+		});
+
+		it("should apply hashline set_line edits", async () => {
+			const testFile = join(testDir, "edit-hashline-set.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-1", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
+		});
+
+		it("should reject stale hashline anchors", async () => {
+			const testFile = join(testDir, "edit-hashline-stale.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-2", {
+					path: testFile,
+					edits: [{ set_line: { anchor: "2:ff", new_text: "BETA" } }],
+				}),
+			).rejects.toThrow(/Hash mismatch/);
 		});
 	});
 
