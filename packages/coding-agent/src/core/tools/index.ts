@@ -40,13 +40,7 @@ export {
 	type GrepToolOptions,
 	grepTool,
 } from "./grep.js";
-export {
-	applyHashlineEdits,
-	computeLineHash,
-	formatHashLines,
-	type HashlineEditOperation,
-	parseLineRef,
-} from "./hashline.js";
+
 export {
 	createLsTool,
 	type LsOperations,
