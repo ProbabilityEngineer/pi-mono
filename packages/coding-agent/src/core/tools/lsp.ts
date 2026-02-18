@@ -1,14 +1,19 @@
 import { relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { type Static, Type } from "@sinclair/typebox";
 import {
 	type DocumentSymbol,
+	formatDiagnostics,
+	formatWorkspaceEdit,
 	type Location,
 	lspDefinition,
+	lspDiagnostics,
 	lspDocumentSymbols,
+	lspFormatDocument,
 	lspHover,
 	lspReferences,
+	lspRename,
 	lspWorkspaceSymbols,
 	type SymbolInformation,
 } from "../../lsp/index.js";
@@ -16,7 +21,15 @@ import { resolveToCwd } from "./path-utils.js";
 
 const lspSchema = Type.Object({
 	action: Type.Union(
-		[Type.Literal("hover"), Type.Literal("definition"), Type.Literal("references"), Type.Literal("symbols")],
+		[
+			Type.Literal("hover"),
+			Type.Literal("definition"),
+			Type.Literal("references"),
+			Type.Literal("symbols"),
+			Type.Literal("diagnostics"),
+			Type.Literal("rename"),
+			Type.Literal("format"),
+		],
 		{
 			description: "LSP operation to run",
 		},
@@ -28,6 +41,8 @@ const lspSchema = Type.Object({
 	include_declaration: Type.Optional(
 		Type.Boolean({ description: "Include declaration in references (default: true)" }),
 	),
+	new_name: Type.Optional(Type.String({ description: "New symbol name for rename action" })),
+	apply: Type.Optional(Type.Boolean({ description: "Apply edits/formatting to disk (default: true)" })),
 });
 
 export type LspToolInput = Static<typeof lspSchema>;
@@ -88,11 +103,11 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 		name: "lsp",
 		label: "lsp",
 		description:
-			"Run read-only language intelligence operations (hover, definition, references, symbols) using configured LSP servers.",
+			"Run LSP operations (hover, definition, references, symbols, diagnostics, rename, format) using configured language servers.",
 		parameters: lspSchema,
 		execute: async (
 			_toolCallId: string,
-			{ action, file, line, column, query, include_declaration }: LspToolInput,
+			{ action, file, line, column, query, include_declaration, new_name, apply }: LspToolInput,
 			signal?: AbortSignal,
 		) => {
 			if (action !== "symbols" && !file) {
@@ -168,6 +183,80 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 									.join("\n")}`,
 							},
 						],
+						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+					};
+				}
+
+				if (action === "diagnostics") {
+					const resolvedFile = resolveToCwd(file as string, cwd);
+					const result = await lspDiagnostics({ cwd, filePath: resolvedFile, signal });
+					if (result.diagnostics.length === 0) {
+						return {
+							content: [{ type: "text", text: "No diagnostics." }],
+							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						};
+					}
+					const rendered = formatDiagnostics(result.diagnostics, pathToFileURL(resolvedFile).toString(), cwd);
+					return {
+						content: [{ type: "text", text: rendered.join("\n") }],
+						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+					};
+				}
+
+				if (action === "rename") {
+					if (!new_name) {
+						return {
+							content: [{ type: "text", text: "Error: new_name is required for rename." }],
+							details: { action, success: false } satisfies LspToolDetails,
+						};
+					}
+					const result = await lspRename({
+						cwd,
+						filePath: resolveToCwd(file as string, cwd),
+						line: line ?? 1,
+						column: column ?? 1,
+						newName: new_name,
+						apply,
+						signal,
+					});
+					if (!result.edit) {
+						return {
+							content: [{ type: "text", text: "No rename edits returned." }],
+							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						};
+					}
+					if (!result.applied) {
+						const preview = formatWorkspaceEdit(result.edit, cwd);
+						return {
+							content: [{ type: "text", text: `Rename preview:\n${preview.join("\n")}` }],
+							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						};
+					}
+					return {
+						content: [{ type: "text", text: `Applied rename:\n${result.changes.join("\n")}` }],
+						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+					};
+				}
+
+				if (action === "format") {
+					const result = await lspFormatDocument({
+						cwd,
+						filePath: resolveToCwd(file as string, cwd),
+						apply,
+						signal,
+					});
+					if (!result.changed) {
+						return {
+							content: [{ type: "text", text: "No formatting changes." }],
+							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						};
+					}
+					const text =
+						apply === false
+							? `Formatting preview available (${result.editCount} edit(s)).`
+							: `Applied formatting (${result.editCount} edit(s)).`;
+					return {
+						content: [{ type: "text", text }],
 						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
 					};
 				}

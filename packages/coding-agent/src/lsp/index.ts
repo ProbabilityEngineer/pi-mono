@@ -1,11 +1,17 @@
 export {
+	type LspDiagnosticsInput,
+	type LspFormatInput,
 	type LspOperationInput,
 	type LspReferencesInput,
+	type LspRenameInput,
 	type LspWorkspaceSymbolsInput,
 	lspDefinition,
+	lspDiagnostics,
 	lspDocumentSymbols,
+	lspFormatDocument,
 	lspHover,
 	lspReferences,
+	lspRename,
 	lspWorkspaceSymbols,
 } from "./api.js";
 export {
@@ -23,6 +29,7 @@ export {
 } from "./client.js";
 export { getServersForLanguage, isCommandAvailable, loadLspServers, resolveCommand } from "./config.js";
 export { detectLanguageIdFromPath } from "./detection.js";
+export { applyTextEditsToString, applyWorkspaceEdit } from "./edits.js";
 export {
 	createLanguageEncounterCoordinator,
 	type LanguageEncounterCoordinator,
@@ -45,7 +52,10 @@ export {
 	wrapWithLspmux,
 } from "./lspmux.js";
 export { type PlanLanguageEncounterInput, planLanguageEncounter } from "./planner.js";
+export { formatDiagnostics, formatWorkspaceEdit } from "./render.js";
 export type {
+	Diagnostic,
+	DocumentChange,
 	DocumentSymbol,
 	Hover,
 	InstallerDefinition,
@@ -56,7 +66,9 @@ export type {
 	LspClientTransport,
 	LspConfigFile,
 	LspDefinitionResult,
+	LspDiagnosticsResult,
 	LspDocumentSymbolsResult,
+	LspFormatResult,
 	LspHoverResult,
 	LspJsonRpcNotification,
 	LspJsonRpcRequest,
@@ -66,6 +78,7 @@ export type {
 	LspPlannerAction,
 	LspPlannerResult,
 	LspReferencesResult,
+	LspRenameResult,
 	LspServerDefinition,
 	LspServerStatus,
 	LspWorkspaceSymbolsResult,
@@ -78,4 +91,7 @@ export type {
 	ResolvedLspServer,
 	ServerConfig,
 	SymbolInformation,
+	TextDocumentEdit,
+	TextEdit,
+	WorkspaceEdit,
 } from "./types.js";
