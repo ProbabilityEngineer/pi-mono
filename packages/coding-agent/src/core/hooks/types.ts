@@ -26,3 +26,9 @@ export interface HookConfigSource {
 	name: string;
 	resolve(input: HookResolutionInput): Promise<HooksConfigMap | undefined>;
 }
+
+export interface HookConfigResolution {
+	config: HooksConfigMap | undefined;
+	sourceName: string | undefined;
+	errors: string[];
+}
