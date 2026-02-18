@@ -100,11 +100,13 @@ Execution policy:
    - commit only that slice
    - push to fork/feature/lsp-lazy-enable
 3) Do not merge to main in-session.
+4) Before any implementation work, read AGENTS.md in repo root.
 
 First actions:
-1) bd show pi-mono-4rc
-2) bd update pi-mono-4rc.1 --status in_progress
-3) Implement only pi-mono-4rc.1 scope.
-4) Run npm run check, commit, push to fork.
-5) Close pi-mono-4rc.1 and move to next child.
+1) Read AGENTS.md.
+2) bd show pi-mono-4rc
+3) bd update pi-mono-4rc.1 --status in_progress
+4) Implement only pi-mono-4rc.1 scope.
+5) Run npm run check, commit, push to fork.
+6) Close pi-mono-4rc.1 and move to next child.
 ```
