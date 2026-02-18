@@ -5,6 +5,7 @@ import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile } from "fs/promises";
 import { formatDimensionNote, resizeImage } from "../../utils/image-resize.js";
 import { detectSupportedImageMimeTypeFromFile } from "../../utils/mime.js";
+import { formatHashLines } from "./hashline.js";
 import { resolveReadPath } from "./path-utils.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from "./truncate.js";
 
@@ -42,18 +43,21 @@ const defaultReadOperations: ReadOperations = {
 export interface ReadToolOptions {
 	/** Whether to auto-resize images to 2000x2000 max. Default: true */
 	autoResizeImages?: boolean;
+	/** Whether text output should be prefixed as LINE:HASH|content. Default: false */
+	hashLines?: boolean;
 	/** Custom operations for file reading. Default: local filesystem */
 	operations?: ReadOperations;
 }
 
 export function createReadTool(cwd: string, options?: ReadToolOptions): AgentTool<typeof readSchema> {
 	const autoResizeImages = options?.autoResizeImages ?? true;
+	const hashLines = options?.hashLines ?? false;
 	const ops = options?.operations ?? defaultReadOperations;
 
 	return {
 		name: "read",
 		label: "read",
-		description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp). Images are sent as attachments. For text files, output is truncated to ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.`,
+		description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp). Images are sent as attachments. For text files, output is truncated to ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.${hashLines ? " In hashline mode, text lines are prefixed as LINE:HASH|content." : ""}`,
 		parameters: readSchema,
 		execute: async (
 			_toolCallId: string,
@@ -187,7 +191,18 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 									outputText = truncation.content;
 								}
 
-								content = [{ type: "text", text: outputText }];
+								let renderedText = outputText;
+								if (hashLines) {
+									const noticeIndex = outputText.indexOf("\n\n[");
+									if (noticeIndex === -1) {
+										renderedText = formatHashLines(outputText, startLineDisplay);
+									} else {
+										const body = outputText.slice(0, noticeIndex);
+										const notice = outputText.slice(noticeIndex);
+										renderedText = formatHashLines(body, startLineDisplay) + notice;
+									}
+								}
+								content = [{ type: "text", text: renderedText }];
 							}
 
 							// Check if aborted after reading
