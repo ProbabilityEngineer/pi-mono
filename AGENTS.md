@@ -11,6 +11,25 @@ read README.md, then ask which module(s) to work on. Based on the answer, read t
 - packages/pods/README.md
 - packages/web-ui/README.md
 
+## Issue Tracking (bd)
+This repository uses **bd (beads)** for issue tracking.
+
+- Start from repo root (`pi-mono`) and use local `.beads` data for this repo only.
+- Run `bd ready` to find unblocked work before starting.
+- Claim work with `bd update <id> --status in_progress`.
+- Inspect details with `bd show <id>`.
+- Create follow-ups with `bd create "Title" --type task --priority 2`.
+- At session end, run `bd sync` after updating issue status.
+
+Quick reference:
+```bash
+bd ready
+bd show <id>
+bd update <id> --status in_progress
+bd close <id>
+bd sync
+```
+
 ## Code Quality
 - No `any` types unless absolutely necessary
 - Check node_modules for external API type definitions instead of guessing
