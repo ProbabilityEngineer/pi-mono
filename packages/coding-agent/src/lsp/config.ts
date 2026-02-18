@@ -248,10 +248,12 @@ export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 		const command = override?.command ?? server.command;
 		const args = override?.args ?? server.args;
 		const languages = override?.languages ?? server.languages;
+		const rootMarkers = override?.rootMarkers ?? server.rootMarkers;
 		const initOptions = override?.initOptions ?? server.initOptions;
 		const settings = override?.settings ?? server.settings;
+		const isLinter = override?.isLinter ?? server.isLinter;
 		const installer = override?.installer ?? server.installer;
-		merged[name] = { name, command, args, languages, initOptions, settings, installer };
+		merged[name] = { name, command, args, languages, rootMarkers, initOptions, settings, isLinter, installer };
 	}
 
 	for (const [name, override] of Object.entries(overrides)) {
@@ -263,8 +265,10 @@ export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 			command: override.command,
 			args: override.args,
 			languages: override.languages,
+			rootMarkers: override.rootMarkers,
 			initOptions: override.initOptions,
 			settings: override.settings,
+			isLinter: override.isLinter,
 			installer: override.installer,
 		};
 	}

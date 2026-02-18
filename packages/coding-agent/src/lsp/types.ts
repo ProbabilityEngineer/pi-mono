@@ -12,8 +12,10 @@ export interface LspServerDefinition {
 	command: string;
 	args?: string[];
 	languages: string[];
+	rootMarkers?: string[];
 	initOptions?: Record<string, unknown>;
 	settings?: Record<string, unknown>;
+	isLinter?: boolean;
 	installer?: InstallerDefinition;
 	disabled?: boolean;
 }
@@ -27,8 +29,10 @@ export interface ResolvedLspServer {
 	command: string;
 	args?: string[];
 	languages: string[];
+	rootMarkers?: string[];
 	initOptions?: Record<string, unknown>;
 	settings?: Record<string, unknown>;
+	isLinter?: boolean;
 	installer?: InstallerDefinition;
 }
 
@@ -54,6 +58,7 @@ export interface ServerConfig {
 	rootMarkers?: string[];
 	initOptions?: Record<string, unknown>;
 	settings?: Record<string, unknown>;
+	isLinter?: boolean;
 	disabled?: boolean;
 	resolvedCommand?: string;
 }
