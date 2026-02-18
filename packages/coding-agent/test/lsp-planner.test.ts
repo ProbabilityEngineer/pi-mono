@@ -99,6 +99,38 @@ describe("lsp planner", () => {
 		expect(plan.action).toBe("install_then_enable");
 	});
 
+	it("uses stdio args for default stdio-only servers", () => {
+		const tsPlan = planLanguageEncounter({
+			cwd: testDir,
+			languageId: "typescript",
+			languageEnabled: false,
+			autoEnableOnEncounter: true,
+			autoInstallOnEncounter: true,
+		});
+		expect(tsPlan.server?.command).toBe("typescript-language-server");
+		expect(tsPlan.server?.args).toEqual(["--stdio"]);
+
+		const jsonPlan = planLanguageEncounter({
+			cwd: testDir,
+			languageId: "json",
+			languageEnabled: false,
+			autoEnableOnEncounter: true,
+			autoInstallOnEncounter: true,
+		});
+		expect(jsonPlan.server?.command).toBe("vscode-json-language-server");
+		expect(jsonPlan.server?.args).toEqual(["--stdio"]);
+
+		const pyPlan = planLanguageEncounter({
+			cwd: testDir,
+			languageId: "python",
+			languageEnabled: false,
+			autoEnableOnEncounter: true,
+			autoInstallOnEncounter: true,
+		});
+		expect(pyPlan.server?.command).toBe("pyright-langserver");
+		expect(pyPlan.server?.args).toEqual(["--stdio"]);
+	});
+
 	it("returns none when auto-install is disabled", () => {
 		const plan = planLanguageEncounter({
 			cwd: testDir,
