@@ -27,6 +27,8 @@ All PRs will be auto-closed until then. Approved contributors can submit PRs aft
 
 Tools for building AI agents and managing LLM deployments.
 
+Hashline and LSP support were backported from [Can Bölük's Oh-My-Pi](https://github.com/can1357/oh-my-pi). You can toggle both in `/settings` (Hashline mode and LSP).
+
 ## Packages
 
 | Package | Description |
