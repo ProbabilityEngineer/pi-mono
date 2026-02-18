@@ -3,12 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-	type CommandProbeRunner,
-	isCommandAvailable,
-	probeCommandInvocation,
-	resolveCommandOnPath,
-} from "../src/lsp/config.js";
+import { type CommandProbeRunner, isCommandAvailable, resolveCommandOnPath } from "../src/lsp/config.js";
 
 const createdDirs: string[] = [];
 
@@ -50,6 +45,19 @@ describe("lsp windows command resolution", () => {
 		expect(resolved).toBe(commandPath);
 	});
 
+	it("normalizes PATHEXT entries without dots", () => {
+		const binDir = createTempDir();
+		const commandPath = join(binDir, "vscode-json-language-server.cmd");
+		writeFileSync(commandPath, "@echo off\r\necho ok\r\n");
+
+		const resolved = resolveCommandOnPath("vscode-json-language-server", {
+			platform: "win32",
+			envPath: binDir,
+			pathExt: "CMD;EXE",
+		});
+		expect(resolved).toBe(commandPath);
+	});
+
 	it("uses spawn-based probe on windows availability checks", () => {
 		const binDir = createTempDir();
 		const commandPath = join(binDir, "pyright-langserver.cmd");
@@ -84,14 +92,61 @@ describe("lsp windows command resolution", () => {
 		expect(available).toBe(false);
 	});
 
-	it("treats ETIMEDOUT probe errors as available", () => {
+	it("returns unavailable when windows spawn probe fails with EACCES", () => {
+		const binDir = createTempDir();
+		const commandPath = join(binDir, "rust-analyzer.cmd");
+		writeFileSync(commandPath, "@echo off\r\necho ok\r\n");
+
+		const err = Object.assign(new Error("spawn denied"), { code: "EACCES" });
+		const probeRunner = vi.fn(() => createSpawnResult({ error: err, status: null }));
+		const available = isCommandAvailable("rust-analyzer", createTempDir(), {
+			platform: "win32",
+			envPath: binDir,
+			pathExt: ".CMD",
+			commandProbeRunner: probeRunner,
+		});
+
+		expect(available).toBe(false);
+		expect(probeRunner).toHaveBeenCalledTimes(1);
+	});
+
+	it("treats ETIMEDOUT probe errors as available in availability checks", () => {
+		const binDir = createTempDir();
+		const commandPath = join(binDir, "typescript-language-server.cmd");
+		writeFileSync(commandPath, "@echo off\r\necho ok\r\n");
+
 		const runner: CommandProbeRunner = () =>
 			createSpawnResult({
 				error: Object.assign(new Error("timed out"), { code: "ETIMEDOUT" }),
 				status: null,
 				signal: "SIGTERM",
 			});
-		const available = probeCommandInvocation("typescript-language-server", createTempDir(), runner);
+		const available = isCommandAvailable("typescript-language-server", createTempDir(), {
+			platform: "win32",
+			envPath: binDir,
+			pathExt: ".CMD",
+			commandProbeRunner: runner,
+		});
+		expect(available).toBe(true);
+	});
+
+	it("supports wrapper commands that return non-zero success via probe contract", () => {
+		const binDir = createTempDir();
+		const commandPath = join(binDir, "wrapper-tool.cmd");
+		writeFileSync(commandPath, "@echo off\r\necho ok\r\n");
+
+		const runner: CommandProbeRunner = () => createSpawnResult({ status: 1, error: undefined });
+		const available = isCommandAvailable("wrapper-tool", createTempDir(), {
+			platform: "win32",
+			envPath: binDir,
+			pathExt: ".CMD",
+			commandProbeRunner: runner,
+			commandProbeContract: {
+				timeoutMs: 1_500,
+				acceptableErrorCodes: ["ETIMEDOUT"],
+				successExitCodes: [0, 1],
+			},
+		});
 		expect(available).toBe(true);
 	});
 });
