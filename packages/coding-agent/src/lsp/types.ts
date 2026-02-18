@@ -12,6 +12,8 @@ export interface LspServerDefinition {
 	command: string;
 	args?: string[];
 	languages: string[];
+	initOptions?: Record<string, unknown>;
+	settings?: Record<string, unknown>;
 	installer?: InstallerDefinition;
 	disabled?: boolean;
 }
@@ -25,6 +27,8 @@ export interface ResolvedLspServer {
 	command: string;
 	args?: string[];
 	languages: string[];
+	initOptions?: Record<string, unknown>;
+	settings?: Record<string, unknown>;
 	installer?: InstallerDefinition;
 }
 

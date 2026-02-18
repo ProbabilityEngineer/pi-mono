@@ -126,6 +126,8 @@ async function resolveClientForFile(cwd: string, filePath: string) {
 		args: server.args,
 		resolvedCommand: resolveCommand(server.command, cwd) ?? undefined,
 		fileTypes: server.languages,
+		initOptions: server.initOptions,
+		settings: server.settings,
 	};
 	const client = await getOrCreateClient(config, cwd);
 	await ensureFileOpen(client, absolutePath);
@@ -143,6 +145,8 @@ async function resolveAnyClient(cwd: string) {
 		args: server.args,
 		resolvedCommand: resolveCommand(server.command, cwd) ?? undefined,
 		fileTypes: server.languages,
+		initOptions: server.initOptions,
+		settings: server.settings,
 	};
 	const client = await getOrCreateClient(config, cwd);
 	return { client, serverName: server.name };
