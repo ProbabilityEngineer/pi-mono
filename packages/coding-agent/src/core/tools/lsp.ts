@@ -6,6 +6,7 @@ import {
 	type DocumentSymbol,
 	formatDiagnostics,
 	formatWorkspaceEdit,
+	getActiveClients,
 	type Location,
 	lspDefinition,
 	lspDiagnostics,
@@ -16,6 +17,7 @@ import {
 	lspRename,
 	lspWorkspaceSymbols,
 	type SymbolInformation,
+	shutdownAll,
 } from "../../lsp/index.js";
 import { resolveToCwd } from "./path-utils.js";
 
@@ -29,6 +31,8 @@ const lspSchema = Type.Object({
 			Type.Literal("diagnostics"),
 			Type.Literal("rename"),
 			Type.Literal("format"),
+			Type.Literal("status"),
+			Type.Literal("reload"),
 		],
 		{
 			description: "LSP operation to run",
@@ -197,14 +201,14 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 		name: "lsp",
 		label: "lsp",
 		description:
-			"Run LSP operations (hover, definition, references, symbols, diagnostics, rename, format) using configured language servers. definition/references/hover are position-based (file+line+column); use symbols first when you only have a name.",
+			"Run LSP operations (hover, definition, references, symbols, diagnostics, rename, format, status, reload) using configured language servers. definition/references/hover are position-based (file+line+column); use symbols first when you only have a name.",
 		parameters: lspSchema,
 		execute: async (
 			_toolCallId: string,
 			{ action, file, line, column, query, include_declaration, new_name, apply }: LspToolInput,
 			signal?: AbortSignal,
 		) => {
-			if (action !== "symbols" && !file) {
+			if (action !== "symbols" && action !== "status" && action !== "reload" && !file) {
 				return {
 					content: [{ type: "text", text: "Error: file is required for this action." }],
 					details: { action, success: false } satisfies LspToolDetails,
@@ -212,6 +216,32 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 			}
 
 			try {
+				if (action === "status") {
+					const clients = getActiveClients();
+					if (clients.length === 0) {
+						return {
+							content: [{ type: "text", text: "No active LSP servers." }],
+							details: { action, success: true } satisfies LspToolDetails,
+						};
+					}
+					const lines = clients.map(
+						(client) =>
+							`- ${client.name} [${client.status}] (${client.fileTypes.length > 0 ? client.fileTypes.join(", ") : "no file types"})`,
+					);
+					return {
+						content: [{ type: "text", text: `Active LSP servers:\n${lines.join("\n")}` }],
+						details: { action, success: true } satisfies LspToolDetails,
+					};
+				}
+
+				if (action === "reload") {
+					shutdownAll();
+					return {
+						content: [{ type: "text", text: "Reloaded LSP servers." }],
+						details: { action, success: true } satisfies LspToolDetails,
+					};
+				}
+
 				if (action === "hover") {
 					const result = await lspHover({
 						cwd,
