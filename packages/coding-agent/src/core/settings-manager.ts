@@ -44,7 +44,7 @@ export interface MarkdownSettings {
 }
 
 export interface EditSettings {
-	mode?: "replace" | "hashline" | "patch";
+	mode?: "replace" | "hashline";
 }
 
 export interface LspSettings {
