@@ -10,7 +10,8 @@ export type HashlineEditOperation =
 	| { replace_lines: { start_anchor: string; end_anchor: string; new_text: string } }
 	| { insert_after: { anchor: string; text: string } };
 
-const HASHLINE_REF_RE = /^(\d+):([0-9a-fA-F]+)$/;
+const HASHLINE_REF_RE = /(\d+):([0-9a-fA-F]+)/;
+const RECOVERY_WINDOW = 8;
 
 function normalizeHashInput(line: string): string {
 	if (line.endsWith("\r")) {
@@ -51,16 +52,66 @@ export function parseLineRef(ref: string): HashlineRef {
 	return { line, hash: match[2] };
 }
 
-function validateLineRef(ref: HashlineRef, fileLines: string[]): void {
-	if (ref.line < 1 || ref.line > fileLines.length) {
-		throw new Error(`Line ${ref.line} is out of range (file has ${fileLines.length} lines).`);
+function getMatchingLinesByHash(hash: string, fileLines: string[]): number[] {
+	const matches: number[] = [];
+	for (let i = 0; i < fileLines.length; i++) {
+		if (computeLineHash(i + 1, fileLines[i]) === hash) {
+			matches.push(i + 1);
+		}
 	}
-	const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
-	if (actualHash !== ref.hash) {
+	return matches;
+}
+
+function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
+	if (fileLines.length === 0) {
+		throw new Error("Cannot apply hashline edits to an empty file.");
+	}
+
+	const inRange = ref.line >= 1 && ref.line <= fileLines.length;
+	if (inRange) {
+		const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
+		if (actualHash === ref.hash) {
+			return ref;
+		}
+	}
+
+	const windowStart = Math.max(1, ref.line - RECOVERY_WINDOW);
+	const windowEnd = Math.min(fileLines.length, ref.line + RECOVERY_WINDOW);
+	const nearbyMatches: number[] = [];
+	for (let line = windowStart; line <= windowEnd; line++) {
+		if (computeLineHash(line, fileLines[line - 1]) === ref.hash) {
+			nearbyMatches.push(line);
+		}
+	}
+
+	if (nearbyMatches.length === 1) {
+		return { line: nearbyMatches[0], hash: ref.hash };
+	}
+	if (nearbyMatches.length > 1) {
 		throw new Error(
-			`Hash mismatch for line ${ref.line}. Expected ${ref.hash}, found ${actualHash}. Re-read the file and retry.`,
+			`Ambiguous hashline anchor "${ref.line}:${ref.hash}". Found multiple nearby matches at lines ${nearbyMatches.join(", ")}. Re-read the file and retry.`,
 		);
 	}
+
+	const allMatches = getMatchingLinesByHash(ref.hash, fileLines);
+	if (allMatches.length === 1) {
+		return { line: allMatches[0], hash: ref.hash };
+	}
+	if (allMatches.length > 1) {
+		throw new Error(
+			`Ambiguous hashline anchor "${ref.line}:${ref.hash}". Found multiple matches at lines ${allMatches.join(", ")}. Re-read the file and retry.`,
+		);
+	}
+
+	if (!inRange) {
+		throw new Error(
+			`Line ${ref.line} is out of range (file has ${fileLines.length} lines), and no matching hash ${ref.hash} was found.`,
+		);
+	}
+	const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
+	throw new Error(
+		`Hash mismatch for line ${ref.line}. Expected ${ref.hash}, found ${actualHash}. Re-read the file and retry.`,
+	);
 }
 
 export function applyHashlineEdits(
@@ -77,22 +128,18 @@ export function applyHashlineEdits(
 
 	const parsedEdits = edits.map((edit, index) => {
 		if ("set_line" in edit) {
-			const ref = parseLineRef(edit.set_line.anchor);
-			validateLineRef(ref, originalLines);
+			const ref = resolveLineRef(parseLineRef(edit.set_line.anchor), originalLines);
 			return { kind: "set_line" as const, ref, newText: edit.set_line.new_text, index };
 		}
 		if ("replace_lines" in edit) {
-			const startRef = parseLineRef(edit.replace_lines.start_anchor);
-			const endRef = parseLineRef(edit.replace_lines.end_anchor);
-			validateLineRef(startRef, originalLines);
-			validateLineRef(endRef, originalLines);
+			const startRef = resolveLineRef(parseLineRef(edit.replace_lines.start_anchor), originalLines);
+			const endRef = resolveLineRef(parseLineRef(edit.replace_lines.end_anchor), originalLines);
 			if (startRef.line > endRef.line) {
 				throw new Error(`Invalid range: start line ${startRef.line} is after end line ${endRef.line}.`);
 			}
 			return { kind: "replace_lines" as const, startRef, endRef, newText: edit.replace_lines.new_text, index };
 		}
-		const ref = parseLineRef(edit.insert_after.anchor);
-		validateLineRef(ref, originalLines);
+		const ref = resolveLineRef(parseLineRef(edit.insert_after.anchor), originalLines);
 		if (edit.insert_after.text.length === 0) {
 			throw new Error("insert_after.text must not be empty.");
 		}
