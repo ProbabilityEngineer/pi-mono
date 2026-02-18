@@ -141,7 +141,12 @@ export {
 // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
 export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.js";
 export {
+	claudeSettingsHookConfigSource,
+	cliHooksConfigSource,
+	envHooksConfigSource,
+	gastownBuiltInHookConfigSource,
 	HOOK_EVENT_NAMES,
+	type HookConfigResolution,
 	type HookConfigSource,
 	type HookDefinition,
 	type HookEventName,
@@ -149,6 +154,8 @@ export {
 	type HookResolutionInput,
 	type HooksConfigMap,
 	parseHooksConfig,
+	type ResolveHooksConfigOptions,
+	resolveHooksConfig,
 } from "./core/hooks/index.js";
 export { convertToLlm } from "./core/messages.js";
 export { ModelRegistry } from "./core/model-registry.js";
