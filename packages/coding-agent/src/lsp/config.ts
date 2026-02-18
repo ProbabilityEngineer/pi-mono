@@ -98,9 +98,10 @@ export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 			continue;
 		}
 		const command = override?.command ?? server.command;
+		const args = override?.args ?? server.args;
 		const languages = override?.languages ?? server.languages;
 		const installer = override?.installer ?? server.installer;
-		merged[name] = { name, command, languages, installer };
+		merged[name] = { name, command, args, languages, installer };
 	}
 
 	for (const [name, override] of Object.entries(overrides)) {
@@ -110,6 +111,7 @@ export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 		merged[name] = {
 			name,
 			command: override.command,
+			args: override.args,
 			languages: override.languages,
 			installer: override.installer,
 		};
