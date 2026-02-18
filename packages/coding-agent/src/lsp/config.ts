@@ -1,9 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { globSync } from "glob";
-import { parse as parseYaml } from "yaml";
 import DEFAULTS from "./defaults.json";
-import { type CommandProbeResult, type CommandProbeRunner, runCommandProbe } from "./probe.js";
 import type { LspConfigFile, LspServerDefinition, ResolvedLspServer } from "./types.js";
 
 const LOCAL_BIN_PATHS: Array<{ markers: string[]; binDir: string }> = [
@@ -13,53 +11,14 @@ const LOCAL_BIN_PATHS: Array<{ markers: string[]; binDir: string }> = [
 	{ markers: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"], binDir: ".env/bin" },
 ];
 
-const DEFAULT_WINDOWS_PATH_EXTENSIONS = [".com", ".exe", ".bat", ".cmd"];
-const COMMAND_PROBE_TIMEOUT_MS = 1_500;
-const SERVER_PRIORITY: Record<string, number> = {
-	"typescript-language-server": 0,
-	"vscode-json-language-server": 0,
-	"vscode-css-language-server": 0,
-	"vscode-html-language-server": 0,
-	pyright: 0,
-	"rust-analyzer": 0,
-	gopls: 0,
-	"sourcekit-lsp": 0,
-};
-
-export interface ResolveCommandOnPathOptions {
-	platform?: NodeJS.Platform;
-	envPath?: string;
-	pathExt?: string;
-	exists?: (path: string) => boolean;
-}
-
-export interface CommandAvailabilityOptions {
-	platform?: NodeJS.Platform;
-	envPath?: string;
-	pathExt?: string;
-	commandProbeContract?: CommandProbeContract;
-	commandProbeRunner?: CommandProbeRunner;
-	exists?: (path: string) => boolean;
-}
-
 function loadOverrides(cwd: string): Record<string, Partial<LspServerDefinition>> {
-	const candidates = [
-		join(cwd, "lsp.json"),
-		join(cwd, "lsp.yaml"),
-		join(cwd, "lsp.yml"),
-		join(cwd, ".pi", "lsp.json"),
-		join(cwd, ".pi", "lsp.yaml"),
-		join(cwd, ".pi", "lsp.yml"),
-		join(cwd, ".config", "pi", "lsp.json"),
-		join(cwd, ".config", "pi", "lsp.yaml"),
-		join(cwd, ".config", "pi", "lsp.yml"),
-	];
+	const candidates = [join(cwd, "lsp.json"), join(cwd, ".pi", "lsp.json")];
 	for (const path of candidates) {
 		if (!existsSync(path)) {
 			continue;
 		}
 		try {
-			const parsed = parseLspConfig(path, readFileSync(path, "utf-8"));
+			const parsed = JSON.parse(readFileSync(path, "utf-8")) as LspConfigFile;
 			if (parsed.servers) {
 				return parsed.servers;
 			}
@@ -68,13 +27,6 @@ function loadOverrides(cwd: string): Record<string, Partial<LspServerDefinition>
 		}
 	}
 	return {};
-}
-
-function parseLspConfig(path: string, raw: string): LspConfigFile {
-	if (path.endsWith(".yaml") || path.endsWith(".yml")) {
-		return parseYaml(raw) as LspConfigFile;
-	}
-	return JSON.parse(raw) as LspConfigFile;
 }
 
 function hasRootMarkers(cwd: string, markers: string[]): boolean {
@@ -90,166 +42,48 @@ function hasRootMarkers(cwd: string, markers: string[]): boolean {
 	return false;
 }
 
-export function resolveCommand(command: string, cwd: string, options: CommandAvailabilityOptions = {}): string | null {
-	const platform = options.platform ?? process.platform;
-	const pathExt = options.pathExt ?? process.env.PATHEXT;
-	const exists = options.exists ?? existsSync;
+export function resolveCommand(command: string, cwd: string): string | null {
 	for (const { markers, binDir } of LOCAL_BIN_PATHS) {
 		if (!hasRootMarkers(cwd, markers)) {
 			continue;
 		}
 		const localPath = join(cwd, binDir, command);
-		const resolvedLocalPath = resolveExecutablePath(localPath, {
-			platform,
-			pathExt,
-			exists,
-		});
-		if (resolvedLocalPath) {
-			return resolvedLocalPath;
+		if (existsSync(localPath)) {
+			return localPath;
 		}
 	}
 
-	return resolveCommandOnPath(command, {
-		platform,
-		envPath: options.envPath ?? process.env.PATH,
-		pathExt,
-		exists,
-	});
+	return resolveOnPath(command);
 }
 
-function normalizeWindowsPathExtensions(pathExt: string | undefined): string[] {
-	const raw = pathExt ?? process.env.PATHEXT;
-	if (!raw) {
-		return DEFAULT_WINDOWS_PATH_EXTENSIONS;
-	}
-	const normalized = raw
-		.split(";")
-		.map((extension) => extension.trim().toLowerCase())
-		.filter((extension) => extension.length > 0)
-		.map((extension) => (extension.startsWith(".") ? extension : `.${extension}`));
-	return normalized.length > 0 ? normalized : DEFAULT_WINDOWS_PATH_EXTENSIONS;
-}
-
-function resolveExecutablePath(
-	commandPath: string,
-	options: { platform: NodeJS.Platform; pathExt?: string; exists: (path: string) => boolean },
-): string | null {
-	if (options.exists(commandPath)) {
-		return commandPath;
-	}
-
-	if (options.platform !== "win32") {
-		return null;
-	}
-
-	for (const extension of normalizeWindowsPathExtensions(options.pathExt)) {
-		const candidate = `${commandPath}${extension}`;
-		if (options.exists(candidate)) {
-			return candidate;
-		}
-	}
-
-	return null;
-}
-
-export function resolveCommandOnPath(command: string, options: ResolveCommandOnPathOptions = {}): string | null {
-	const platform = options.platform ?? process.platform;
-	const envPath = options.envPath ?? process.env.PATH;
-	const exists = options.exists ?? existsSync;
+function resolveOnPath(command: string): string | null {
+	const envPath = process.env.PATH;
 	if (!envPath) {
 		return null;
 	}
-
-	const delimiter = platform === "win32" ? ";" : ":";
+	const delimiter = process.platform === "win32" ? ";" : ":";
 	for (const dir of envPath.split(delimiter)) {
 		if (!dir) {
 			continue;
 		}
 		const executable = join(dir, command);
-		const resolvedPath = resolveExecutablePath(executable, {
-			platform,
-			pathExt: options.pathExt,
-			exists,
-		});
-		if (resolvedPath) {
-			return resolvedPath;
+		if (existsSync(executable)) {
+			return executable;
+		}
+		if (process.platform === "win32") {
+			for (const ext of [".exe", ".cmd", ".bat"]) {
+				const candidate = executable + ext;
+				if (existsSync(candidate)) {
+					return candidate;
+				}
+			}
 		}
 	}
 	return null;
 }
 
-export function probeCommandInvocation(
-	commandPath: string,
-	cwd: string,
-	commandProbeRunner?: CommandProbeRunner,
-): boolean {
-	const result = probeCommandInvocationWithContract(
-		commandPath,
-		cwd,
-		getDefaultCommandProbeContract(),
-		commandProbeRunner,
-	);
-	if (result.timedOut) {
-		return true;
-	}
-	return result.available;
-}
-
-export interface CommandProbeContract {
-	timeoutMs: number;
-	acceptableErrorCodes: string[];
-	successExitCodes: number[];
-}
-
-export function getDefaultCommandProbeContract(): CommandProbeContract {
-	return {
-		timeoutMs: COMMAND_PROBE_TIMEOUT_MS,
-		acceptableErrorCodes: ["ETIMEDOUT"],
-		successExitCodes: [0],
-	};
-}
-
-export function probeCommandInvocationWithContract(
-	commandPath: string,
-	cwd: string,
-	contract: CommandProbeContract,
-	commandProbeRunner?: CommandProbeRunner,
-): CommandProbeResult {
-	return runCommandProbe(
-		{
-			command: commandPath,
-			args: ["--version"],
-			cwd,
-			timeoutMs: contract.timeoutMs,
-			windowsHide: true,
-			acceptableErrorCodes: contract.acceptableErrorCodes,
-			successExitCodes: contract.successExitCodes,
-		},
-		commandProbeRunner,
-	);
-}
-
-export function isCommandAvailable(command: string, cwd: string, options: CommandAvailabilityOptions = {}): boolean {
-	const resolved = resolveCommand(command, cwd, options);
-	if (!resolved) {
-		return false;
-	}
-
-	const platform = options.platform ?? process.platform;
-	if (platform !== "win32") {
-		return true;
-	}
-
-	const probeResult = probeCommandInvocationWithContract(
-		resolved,
-		cwd,
-		options.commandProbeContract ?? getDefaultCommandProbeContract(),
-		options.commandProbeRunner,
-	);
-	if (probeResult.timedOut) {
-		return true;
-	}
-	return probeResult.available;
+export function isCommandAvailable(command: string, cwd: string): boolean {
+	return resolveCommand(command, cwd) !== null || resolveOnPath(command) !== null;
 }
 
 export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
@@ -264,14 +98,9 @@ export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 			continue;
 		}
 		const command = override?.command ?? server.command;
-		const args = override?.args ?? server.args;
 		const languages = override?.languages ?? server.languages;
-		const rootMarkers = override?.rootMarkers ?? server.rootMarkers;
-		const initOptions = override?.initOptions ?? server.initOptions;
-		const settings = override?.settings ?? server.settings;
-		const isLinter = override?.isLinter ?? server.isLinter;
 		const installer = override?.installer ?? server.installer;
-		merged[name] = { name, command, args, languages, rootMarkers, initOptions, settings, isLinter, installer };
+		merged[name] = { name, command, languages, installer };
 	}
 
 	for (const [name, override] of Object.entries(overrides)) {
@@ -281,12 +110,7 @@ export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 		merged[name] = {
 			name,
 			command: override.command,
-			args: override.args,
 			languages: override.languages,
-			rootMarkers: override.rootMarkers,
-			initOptions: override.initOptions,
-			settings: override.settings,
-			isLinter: override.isLinter,
 			installer: override.installer,
 		};
 	}
@@ -298,14 +122,5 @@ export function getServersForLanguage(languageId: string, cwd: string): Resolved
 	const servers = loadLspServers(cwd);
 	return Object.values(servers)
 		.filter((server) => server.languages.includes(languageId))
-		.sort((a, b) => {
-			const leftPriority = SERVER_PRIORITY[a.name] ?? 100;
-			const rightPriority = SERVER_PRIORITY[b.name] ?? 100;
-			if (leftPriority !== rightPriority) {
-				return leftPriority - rightPriority;
-			}
-			return a.name.localeCompare(b.name);
-		});
+		.sort((a, b) => a.name.localeCompare(b.name));
 }
-
-export type { CommandProbeResult, CommandProbeRunner };

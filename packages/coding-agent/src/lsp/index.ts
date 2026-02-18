@@ -1,45 +1,5 @@
-export {
-	type LspDiagnosticsInput,
-	type LspFormatInput,
-	type LspOperationInput,
-	type LspReferencesInput,
-	type LspRenameInput,
-	type LspWorkspaceSymbolsInput,
-	lspDefinition,
-	lspDiagnostics,
-	lspDocumentSymbols,
-	lspFormatDocument,
-	lspHover,
-	lspReferences,
-	lspRename,
-	lspWorkspaceSymbols,
-} from "./api.js";
-export {
-	ensureFileOpen,
-	getActiveClients,
-	getOrCreateClient,
-	notifySaved,
-	sendNotification,
-	sendRequest,
-	setIdleTimeout,
-	shutdownAll,
-	shutdownClient,
-	syncContent,
-	WARMUP_TIMEOUT_MS,
-} from "./client.js";
-export {
-	type CommandProbeContract,
-	getDefaultCommandProbeContract,
-	getServersForLanguage,
-	isCommandAvailable,
-	loadLspServers,
-	probeCommandInvocation,
-	probeCommandInvocationWithContract,
-	resolveCommand,
-	resolveCommandOnPath,
-} from "./config.js";
+export { getServersForLanguage, isCommandAvailable, loadLspServers, resolveCommand } from "./config.js";
 export { detectLanguageIdFromPath } from "./detection.js";
-export { applyTextEditsToString, applyWorkspaceEdit } from "./edits.js";
 export {
 	createLanguageEncounterCoordinator,
 	type LanguageEncounterCoordinator,
@@ -53,60 +13,13 @@ export {
 	type InstallCommandRunner,
 	runInstallCommand,
 } from "./installer.js";
-export {
-	detectLspmux,
-	getLspmuxCommand,
-	invalidateLspmuxCache,
-	isLspmuxActive,
-	isLspmuxSupported,
-	wrapWithLspmux,
-} from "./lspmux.js";
-export {
-	type PlanLanguageEncounterInput,
-	type PlanLanguageEncounterOptions,
-	planLanguageEncounter,
-} from "./planner.js";
-export { runCommandProbe } from "./probe.js";
-export { formatDiagnostics, formatWorkspaceEdit } from "./render.js";
+export { type PlanLanguageEncounterInput, planLanguageEncounter } from "./planner.js";
 export type {
-	Diagnostic,
-	DocumentChange,
-	DocumentSymbol,
-	Hover,
 	InstallerDefinition,
 	InstallerKind,
-	Location,
-	LocationLink,
-	LspClient,
-	LspClientTransport,
 	LspConfigFile,
-	LspDefinitionResult,
-	LspDiagnosticsResult,
-	LspDocumentSymbolsResult,
-	LspFormatResult,
-	LspHoverResult,
-	LspJsonRpcNotification,
-	LspJsonRpcRequest,
-	LspJsonRpcResponse,
-	LspmuxState,
-	LspmuxWrappedCommand,
 	LspPlannerAction,
 	LspPlannerResult,
-	LspReferencesResult,
-	LspRenameResult,
 	LspServerDefinition,
-	LspServerStatus,
-	LspWorkspaceSymbolsResult,
-	MarkedString,
-	MarkupContent,
-	OpenFileState,
-	PendingLspRequest,
-	Position,
-	Range,
 	ResolvedLspServer,
-	ServerConfig,
-	SymbolInformation,
-	TextDocumentEdit,
-	TextEdit,
-	WorkspaceEdit,
 } from "./types.js";
