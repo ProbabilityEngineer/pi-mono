@@ -24,10 +24,10 @@ packages/*/dist-firefox/
 coverage/
 .nyc_output/
 .pi_config/
+.pi/settings.json
 tui-debug.log
 compaction-results/
 .opencode/
-.pi/settings.json
 syntax.jsonl
 out.jsonl
 pi-*.html
