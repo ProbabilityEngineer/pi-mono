@@ -117,6 +117,81 @@ describe("lsp tool", () => {
 		expect(getTextContent(result)).toContain("src/index.ts:4:2");
 	});
 
+	it("filters document symbols by query when file is provided", async () => {
+		mockLspDocumentSymbols.mockResolvedValueOnce({
+			server: "tsserver",
+			symbols: [
+				{
+					name: "AgentSession",
+					kind: 5,
+					range: { start: { line: 9, character: 0 }, end: { line: 30, character: 1 } },
+					selectionRange: { start: { line: 9, character: 6 }, end: { line: 9, character: 18 } },
+					children: [
+						{
+							name: "getEditMode",
+							kind: 6,
+							range: { start: { line: 18, character: 2 }, end: { line: 20, character: 3 } },
+							selectionRange: { start: { line: 18, character: 2 }, end: { line: 18, character: 13 } },
+						},
+						{
+							name: "setModel",
+							kind: 6,
+							range: { start: { line: 22, character: 2 }, end: { line: 24, character: 3 } },
+							selectionRange: { start: { line: 22, character: 2 }, end: { line: 22, character: 10 } },
+						},
+					],
+				},
+			],
+		});
+
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-6a", {
+			action: "symbols",
+			file: "src/agent-session.ts",
+			query: "getEditMode",
+		});
+
+		const text = getTextContent(result);
+		expect(text).toContain("getEditMode (line 19)");
+		expect(text).not.toContain("setModel");
+	});
+
+	it("ranks workspace symbols with exact match first", async () => {
+		mockLspWorkspaceSymbols.mockResolvedValueOnce({
+			server: "tsserver",
+			symbols: [
+				{
+					name: "getEditModeLegacy",
+					kind: 6,
+					location: {
+						uri: "file:///workspace/src/legacy.ts",
+						range: {
+							start: { line: 11, character: 2 },
+							end: { line: 11, character: 15 },
+						},
+					},
+				},
+				{
+					name: "getEditMode",
+					kind: 6,
+					location: {
+						uri: "file:///workspace/src/settings-manager.ts",
+						range: {
+							start: { line: 902, character: 1 },
+							end: { line: 902, character: 12 },
+						},
+					},
+				},
+			],
+		});
+
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-6b", { action: "symbols", query: "getEditMode" });
+		const text = getTextContent(result);
+		const firstLine = text.split("\n")[0] ?? "";
+		expect(firstLine).toContain("- getEditMode (src/settings-manager.ts:903:2)");
+	});
+
 	it("renders diagnostics using formatter", async () => {
 		mockLspDiagnostics.mockResolvedValueOnce({
 			server: "tsserver",
