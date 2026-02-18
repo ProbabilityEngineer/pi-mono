@@ -7,6 +7,7 @@
 - Added LSP lazy language encounter pipeline with language detection, planner, installer abstraction, and per-session retry suppression for failed installs.
 - Added project-scoped LSP language state in settings (`lsp.languages`) with safe defaults and persistence helpers.
 - Added LSP read-only API operations (`hover`, `definition`, `references`, `document symbols`, `workspace symbols`) with backported JSON-RPC client transport and lspmux integration.
+- Added LSP diagnostics/rename/format pathways with workspace edit application and diagnostic/workspace-edit rendering utilities.
 
 ### Changed
 

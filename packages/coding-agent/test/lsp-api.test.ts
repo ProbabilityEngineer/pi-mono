@@ -2,7 +2,16 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { lspDefinition, lspDocumentSymbols, lspHover, lspReferences, lspWorkspaceSymbols } from "../src/lsp/api.js";
+import {
+	lspDefinition,
+	lspDiagnostics,
+	lspDocumentSymbols,
+	lspFormatDocument,
+	lspHover,
+	lspReferences,
+	lspRename,
+	lspWorkspaceSymbols,
+} from "../src/lsp/api.js";
 import { shutdownAll } from "../src/lsp/client.js";
 
 const createdDirs: string[] = [];
@@ -51,6 +60,47 @@ process.stdin.on("data", (chunk) => {
       writeMessage({ jsonrpc: "2.0", id: message.id, result: [{ name: "value", kind: 13, range: { start: { line: 0, character: 6 }, end: { line: 0, character: 11 } }, selectionRange: { start: { line: 0, character: 6 }, end: { line: 0, character: 11 } } }] });
     } else if (message.method === "workspace/symbol") {
       writeMessage({ jsonrpc: "2.0", id: message.id, result: [{ name: "value", kind: 13, location: { uri: "file:///tmp/workspace.ts", range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } } } }] });
+    } else if (message.method === "textDocument/rename") {
+      writeMessage({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          changes: {
+            [message.params.textDocument.uri]: [
+              {
+                range: { start: { line: 0, character: 6 }, end: { line: 0, character: 11 } },
+                newText: message.params.newName
+              }
+            ]
+          }
+        }
+      });
+    } else if (message.method === "textDocument/formatting") {
+      writeMessage({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: [
+          {
+            range: { start: { line: 0, character: 0 }, end: { line: 0, character: 15 } },
+            newText: "const value = 1;\\n"
+          }
+        ]
+      });
+    } else if (message.method === "textDocument/didSave") {
+      writeMessage({
+        jsonrpc: "2.0",
+        method: "textDocument/publishDiagnostics",
+        params: {
+          uri: message.params.textDocument.uri,
+          diagnostics: [
+            {
+              range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } },
+              severity: 2,
+              message: "sample warning"
+            }
+          ]
+        }
+      });
     } else if (message.method === "shutdown") {
       writeMessage({ jsonrpc: "2.0", id: message.id, result: null });
       process.exit(0);
@@ -92,7 +142,7 @@ afterEach(() => {
 });
 
 describe("lsp api read-only operations", () => {
-	it("executes hover/definition/references/symbol operations", async () => {
+	it("executes hover/definition/references/symbol/diagnostics operations", async () => {
 		const { cwd, filePath } = createFakeServerFixture();
 
 		const hover = await lspHover({ cwd, filePath, line: 1, column: 1 });
@@ -112,5 +162,40 @@ describe("lsp api read-only operations", () => {
 		const workspace = await lspWorkspaceSymbols({ cwd, query: "value" });
 		expect(workspace.symbols).toHaveLength(1);
 		expect(workspace.symbols[0].name).toBe("value");
+
+		const diagnostics = await lspDiagnostics({ cwd, filePath });
+		expect(diagnostics.diagnostics).toHaveLength(1);
+		expect(diagnostics.diagnostics[0].message).toContain("sample warning");
+	});
+});
+
+describe("lsp api edit operations", () => {
+	it("supports rename and formatting pathways", async () => {
+		const { cwd, filePath } = createFakeServerFixture();
+
+		const preview = await lspRename({
+			cwd,
+			filePath,
+			line: 1,
+			column: 7,
+			newName: "renamed",
+			apply: false,
+		});
+		expect(preview.applied).toBe(false);
+		expect(preview.edit).toBeDefined();
+
+		const applied = await lspRename({
+			cwd,
+			filePath,
+			line: 1,
+			column: 7,
+			newName: "renamed",
+		});
+		expect(applied.applied).toBe(true);
+		expect(applied.changes.length).toBeGreaterThan(0);
+
+		const formatted = await lspFormatDocument({ cwd, filePath, apply: false });
+		expect(formatted.changed).toBe(true);
+		expect(formatted.applied).toBe(false);
 	});
 });
