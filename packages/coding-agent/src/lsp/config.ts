@@ -26,6 +26,7 @@ export interface CommandAvailabilityOptions {
 	platform?: NodeJS.Platform;
 	envPath?: string;
 	pathExt?: string;
+	commandProbeContract?: CommandProbeContract;
 	commandProbeRunner?: CommandProbeRunner;
 	exists?: (path: string) => boolean;
 }
@@ -211,7 +212,16 @@ export function isCommandAvailable(command: string, cwd: string, options: Comman
 		return true;
 	}
 
-	return probeCommandInvocation(resolved, cwd, options.commandProbeRunner);
+	const probeResult = probeCommandInvocationWithContract(
+		resolved,
+		cwd,
+		options.commandProbeContract ?? getDefaultCommandProbeContract(),
+		options.commandProbeRunner,
+	);
+	if (probeResult.timedOut) {
+		return true;
+	}
+	return probeResult.available;
 }
 
 export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
