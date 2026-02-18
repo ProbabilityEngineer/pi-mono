@@ -15,6 +15,10 @@
 - Added Gemini 3.1 model catalog entries for all built-in providers that currently expose it: `google`, `google-vertex`, `opencode`, `openrouter`, and `vercel-ai-gateway`.
 - Added Claude Opus 4.6 Thinking to the `google-antigravity` model catalog.
 
+### Fixed
+
+- Hardened Windows LSP command availability checks to use `PATH`/`PATHEXT` resolution plus spawn-based probe validation instead of path-existence checks only.
+
 ## [0.53.0] - 2026-02-17
 
 ### Breaking Changes
