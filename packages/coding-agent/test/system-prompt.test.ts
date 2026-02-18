@@ -36,6 +36,16 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain("- edit:");
 			expect(prompt).toContain("- write:");
 		});
+
+		test("includes lsp when selected", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "lsp"],
+				contextFiles: [],
+				skills: [],
+			});
+
+			expect(prompt).toContain("- lsp:");
+		});
 	});
 
 	describe("custom tool snippets", () => {
