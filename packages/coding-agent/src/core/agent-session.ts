@@ -26,6 +26,7 @@ import type {
 import type { AssistantMessage, ImageContent, Message, Model, TextContent } from "@mariozechner/pi-ai";
 import { isContextOverflow, modelsAreEqual, resetApiProviders, supportsXhigh } from "@mariozechner/pi-ai";
 import { getDocsPath } from "../config.js";
+import { createLanguageEncounterCoordinator, type LanguageEncounterCoordinator } from "../lsp/encounter.js";
 import { theme } from "../modes/interactive/theme/theme.js";
 import { stripFrontmatter } from "../utils/frontmatter.js";
 import { sleep } from "../utils/sleep.js";
@@ -261,6 +262,7 @@ export class AgentSession {
 	private _extensionShutdownHandler?: ShutdownHandler;
 	private _extensionErrorListener?: ExtensionErrorListener;
 	private _extensionErrorUnsubscriber?: () => void;
+	private _languageEncounterCoordinator: LanguageEncounterCoordinator;
 
 	// Model registry for API key resolution
 	private _modelRegistry: ModelRegistry;
@@ -283,6 +285,7 @@ export class AgentSession {
 		this._extensionRunnerRef = config.extensionRunnerRef;
 		this._initialActiveToolNames = config.initialActiveToolNames;
 		this._baseToolsOverride = config.baseToolsOverride;
+		this._languageEncounterCoordinator = createLanguageEncounterCoordinator(this._cwd, this.settingsManager);
 
 		// Always subscribe to agent events for internal handling
 		// (session persistence, extensions, auto-compaction, retry logic)
@@ -1975,10 +1978,20 @@ export class AgentSession {
 		const baseTools = this._baseToolsOverride
 			? this._baseToolsOverride
 			: createAllTools(this._cwd, {
-					read: { autoResizeImages, hashLines: readHashLines },
+					read: {
+						autoResizeImages,
+						hashLines: readHashLines,
+						onPathAccess: async (path) => await this._handleLanguageEncounter(path),
+					},
 					grep: { hashLines: readHashLines },
 					bash: { commandPrefix: shellCommandPrefix },
-					edit: { editMode },
+					edit: {
+						editMode,
+						onPathAccess: async (path) => await this._handleLanguageEncounter(path),
+					},
+					write: {
+						onPathAccess: async (path) => await this._handleLanguageEncounter(path),
+					},
 				});
 
 		this._baseToolRegistry = new Map(Object.entries(baseTools).map(([name, tool]) => [name, tool as AgentTool]));
@@ -2052,6 +2065,32 @@ export class AgentSession {
 		const systemPromptToolNames = Array.from(activeToolNameSet).filter((name) => this._baseToolRegistry.has(name));
 		this._baseSystemPrompt = this._rebuildSystemPrompt(systemPromptToolNames);
 		this.agent.setSystemPrompt(this._baseSystemPrompt);
+	}
+
+	private async _handleLanguageEncounter(path: string): Promise<string | undefined> {
+		if (!this.settingsManager.getLspEnabled()) {
+			return undefined;
+		}
+
+		try {
+			const result = await this._languageEncounterCoordinator.handlePath(path);
+			if (!result || !result.server) {
+				return undefined;
+			}
+			if (result.enabled && result.installed) {
+				return `Installed ${result.server} and enabled ${result.language}.`;
+			}
+			if (result.enabled && !result.installed) {
+				return `Enabled ${result.language} using ${result.server}.`;
+			}
+			if (result.remediation) {
+				return `Could not prepare ${result.language} (${result.server}). ${result.remediation}`;
+			}
+			return undefined;
+		} catch {
+			// Never fail the caller tool on LSP encounter side effects.
+			return undefined;
+		}
 	}
 
 	async reload(): Promise<void> {

@@ -244,4 +244,44 @@ describe("SettingsManager", () => {
 			expect(savedSettings.theme).toBe("light");
 		});
 	});
+
+	describe("lsp settings", () => {
+		it("should default to globally enabled LSP with no languages enabled", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+
+			expect(manager.getLspEnabled()).toBe(true);
+			expect(manager.getLspAutoEnableOnEncounter()).toBe(true);
+			expect(manager.getLspAutoInstallOnEncounter()).toBe(true);
+			expect(manager.getLspLanguageEnabled("typescript")).toBe(false);
+		});
+
+		it("should persist language enablement in project settings only", async () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			manager.setProjectLspLanguageEnabled("typescript", true);
+			await manager.flush();
+
+			const projectSettingsPath = join(projectDir, ".pi", "settings.json");
+			const projectSettings = JSON.parse(readFileSync(projectSettingsPath, "utf-8"));
+			expect(projectSettings.lsp.languages.typescript).toBe(true);
+
+			const globalSettingsPath = join(agentDir, "settings.json");
+			expect(existsSync(globalSettingsPath)).toBe(false);
+		});
+
+		it("should persist and reload lsp toggles and language state", async () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			manager.setLspEnabled(false);
+			manager.setLspAutoEnableOnEncounter(false);
+			manager.setLspAutoInstallOnEncounter(false);
+			manager.setProjectLspLanguageEnabled("python", true);
+			await manager.flush();
+
+			manager.reload();
+
+			expect(manager.getLspEnabled()).toBe(false);
+			expect(manager.getLspAutoEnableOnEncounter()).toBe(false);
+			expect(manager.getLspAutoInstallOnEncounter()).toBe(false);
+			expect(manager.getLspLanguageEnabled("python")).toBe(true);
+		});
+	});
 });
