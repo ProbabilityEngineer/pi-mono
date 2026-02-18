@@ -9,6 +9,7 @@
 - Added LSP read-only API operations (`hover`, `definition`, `references`, `document symbols`, `workspace symbols`) with backported JSON-RPC client transport and lspmux integration.
 - Added LSP diagnostics/rename/format pathways with workspace edit application and diagnostic/workspace-edit rendering utilities.
 - Added a cross-platform LSP command probe contract abstraction (timeouts, expected exit behavior, injectable runners) for deterministic command availability validation.
+- Added an explicit LSP parity matrix (`docs/lsp-parity-matrix.md`) and language coverage checks for required language IDs.
 
 ### Changed
 
