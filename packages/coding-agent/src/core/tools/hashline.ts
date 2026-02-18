@@ -10,11 +10,7 @@ export type HashlineEditOperation =
 	| { replace_lines: { start_anchor: string; end_anchor: string; new_text: string } }
 	| { insert_after: { anchor: string; text: string } };
 
-const HASHLINE_REF_RE = /(\d+):([0-9a-fA-F]+)/;
-const HASHLINE_TEXT_PREFIX_RE = /^\d+:[0-9a-fA-F]{2,}\|/;
-const HASH_HEX_LENGTH = 6;
-const MIN_COMPAT_HASH_HEX_LENGTH = 2;
-const RECOVERY_WINDOW = 8;
+const HASHLINE_REF_RE = /^(\d+):([0-9a-fA-F]+)$/;
 
 function normalizeHashInput(line: string): string {
 	if (line.endsWith("\r")) {
@@ -25,7 +21,7 @@ function normalizeHashInput(line: string): string {
 
 export function computeLineHash(_lineNum: number, line: string): string {
 	const digest = createHash("sha1").update(normalizeHashInput(line), "utf8").digest("hex");
-	return digest.slice(0, HASH_HEX_LENGTH);
+	return digest.slice(0, 2);
 }
 
 export function formatHashLines(content: string, startLine = 1): string {
@@ -52,88 +48,19 @@ export function parseLineRef(ref: string): HashlineRef {
 	if (line < 1) {
 		throw new Error(`Invalid line reference "${ref}". Line number must be >= 1.`);
 	}
-	const hash = match[2];
-	if (hash.length < MIN_COMPAT_HASH_HEX_LENGTH) {
-		throw new Error(
-			`Invalid line reference "${ref}". Hash must contain at least ${MIN_COMPAT_HASH_HEX_LENGTH} hex chars.`,
-		);
-	}
-	return { line, hash };
+	return { line, hash: match[2] };
 }
 
-function hashMatches(expectedHashOrPrefix: string, actualHash: string): boolean {
-	return actualHash.startsWith(expectedHashOrPrefix);
-}
-
-function assertNoHashlinePrefixedContent(text: string): void {
-	const lines = text.split("\n");
-	for (const line of lines) {
-		if (HASHLINE_TEXT_PREFIX_RE.test(line)) {
-			throw new Error("Do not include hashline prefixes in replacement text.");
-		}
-	}
-}
-
-function getMatchingLinesByHash(hash: string, fileLines: string[]): number[] {
-	const matches: number[] = [];
-	for (let i = 0; i < fileLines.length; i++) {
-		if (hashMatches(hash, computeLineHash(i + 1, fileLines[i]))) {
-			matches.push(i + 1);
-		}
-	}
-	return matches;
-}
-
-function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
-	if (fileLines.length === 0) {
-		throw new Error("Cannot apply hashline edits to an empty file.");
-	}
-
-	const inRange = ref.line >= 1 && ref.line <= fileLines.length;
-	if (inRange) {
-		const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
-		if (hashMatches(ref.hash, actualHash)) {
-			return ref;
-		}
-	}
-
-	const windowStart = Math.max(1, ref.line - RECOVERY_WINDOW);
-	const windowEnd = Math.min(fileLines.length, ref.line + RECOVERY_WINDOW);
-	const nearbyMatches: number[] = [];
-	for (let line = windowStart; line <= windowEnd; line++) {
-		if (hashMatches(ref.hash, computeLineHash(line, fileLines[line - 1]))) {
-			nearbyMatches.push(line);
-		}
-	}
-
-	if (nearbyMatches.length === 1) {
-		return { line: nearbyMatches[0], hash: ref.hash };
-	}
-	if (nearbyMatches.length > 1) {
-		throw new Error(
-			`Ambiguous hashline anchor "${ref.line}:${ref.hash}". Found multiple nearby matches at lines ${nearbyMatches.join(", ")}. Re-read the file and retry.`,
-		);
-	}
-
-	const allMatches = getMatchingLinesByHash(ref.hash, fileLines);
-	if (allMatches.length === 1) {
-		return { line: allMatches[0], hash: ref.hash };
-	}
-	if (allMatches.length > 1) {
-		throw new Error(
-			`Ambiguous hashline anchor "${ref.line}:${ref.hash}". Found multiple matches at lines ${allMatches.join(", ")}. Re-read the file and retry.`,
-		);
-	}
-
-	if (!inRange) {
-		throw new Error(
-			`Line ${ref.line} is out of range (file has ${fileLines.length} lines), and no matching hash ${ref.hash} was found.`,
-		);
+function validateLineRef(ref: HashlineRef, fileLines: string[]): void {
+	if (ref.line < 1 || ref.line > fileLines.length) {
+		throw new Error(`Line ${ref.line} is out of range (file has ${fileLines.length} lines).`);
 	}
 	const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
-	throw new Error(
-		`Hash mismatch for line ${ref.line}. Expected ${ref.hash}, found ${actualHash}. Re-read the file and retry.`,
-	);
+	if (actualHash !== ref.hash) {
+		throw new Error(
+			`Hash mismatch for line ${ref.line}. Expected ${ref.hash}, found ${actualHash}. Re-read the file and retry.`,
+		);
+	}
 }
 
 export function applyHashlineEdits(
@@ -150,24 +77,25 @@ export function applyHashlineEdits(
 
 	const parsedEdits = edits.map((edit, index) => {
 		if ("set_line" in edit) {
-			assertNoHashlinePrefixedContent(edit.set_line.new_text);
-			const ref = resolveLineRef(parseLineRef(edit.set_line.anchor), originalLines);
+			const ref = parseLineRef(edit.set_line.anchor);
+			validateLineRef(ref, originalLines);
 			return { kind: "set_line" as const, ref, newText: edit.set_line.new_text, index };
 		}
 		if ("replace_lines" in edit) {
-			assertNoHashlinePrefixedContent(edit.replace_lines.new_text);
-			const startRef = resolveLineRef(parseLineRef(edit.replace_lines.start_anchor), originalLines);
-			const endRef = resolveLineRef(parseLineRef(edit.replace_lines.end_anchor), originalLines);
+			const startRef = parseLineRef(edit.replace_lines.start_anchor);
+			const endRef = parseLineRef(edit.replace_lines.end_anchor);
+			validateLineRef(startRef, originalLines);
+			validateLineRef(endRef, originalLines);
 			if (startRef.line > endRef.line) {
 				throw new Error(`Invalid range: start line ${startRef.line} is after end line ${endRef.line}.`);
 			}
 			return { kind: "replace_lines" as const, startRef, endRef, newText: edit.replace_lines.new_text, index };
 		}
-		const ref = resolveLineRef(parseLineRef(edit.insert_after.anchor), originalLines);
+		const ref = parseLineRef(edit.insert_after.anchor);
+		validateLineRef(ref, originalLines);
 		if (edit.insert_after.text.length === 0) {
 			throw new Error("insert_after.text must not be empty.");
 		}
-		assertNoHashlinePrefixedContent(edit.insert_after.text);
 		return { kind: "insert_after" as const, ref, text: edit.insert_after.text, index };
 	});
 

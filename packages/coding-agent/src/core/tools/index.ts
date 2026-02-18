@@ -18,6 +18,13 @@ export {
 	editTool,
 } from "./edit.js";
 export {
+	applyHashlineEdits,
+	computeLineHash,
+	formatHashLines,
+	parseLineRef,
+	type HashlineEditOperation,
+} from "./hashline.js";
+export {
 	createFindTool,
 	type FindOperations,
 	type FindToolDetails,

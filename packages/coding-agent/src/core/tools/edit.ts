@@ -158,6 +158,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 			}
 
 			const { path, oldText, newText } = params as ReplaceEditToolInput;
+
 			const lspNote = await options?.onPathAccess?.(path);
 			const absolutePath = resolveToCwd(path, cwd);
 
