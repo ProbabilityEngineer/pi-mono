@@ -261,6 +261,10 @@
 - Integrated probe-backed command availability gating into LSP planner/installer readiness decisions so non-runnable server binaries trigger install/failure paths.
 - Expanded Windows LSP probe coverage (PATHEXT normalization, wrapper exit contracts, timeout/failure paths) and documented command-resolution remediation guidance.
 
+### Fixed
+
+- Hardened Windows LSP command availability checks to use `PATH`/`PATHEXT` resolution plus spawn-based probe validation instead of path-existence checks only.
+
 ## [0.53.0] - 2026-02-17
 
 ### Breaking Changes

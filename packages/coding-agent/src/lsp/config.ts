@@ -1,3 +1,4 @@
+import { type SpawnSyncOptions, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { globSync } from "glob";
@@ -10,6 +11,30 @@ const LOCAL_BIN_PATHS: Array<{ markers: string[]; binDir: string }> = [
 	{ markers: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"], binDir: "venv/bin" },
 	{ markers: ["pyproject.toml", "requirements.txt", "setup.py", "Pipfile"], binDir: ".env/bin" },
 ];
+
+const DEFAULT_WINDOWS_PATH_EXTENSIONS = [".com", ".exe", ".bat", ".cmd"];
+const COMMAND_PROBE_TIMEOUT_MS = 1_500;
+
+export interface ResolveCommandOnPathOptions {
+	platform?: NodeJS.Platform;
+	envPath?: string;
+	pathExt?: string;
+	exists?: (path: string) => boolean;
+}
+
+export type CommandProbeRunner = (
+	command: string,
+	args: string[],
+	options: SpawnSyncOptions,
+) => { error?: Error | null };
+
+export interface CommandAvailabilityOptions {
+	platform?: NodeJS.Platform;
+	envPath?: string;
+	pathExt?: string;
+	commandProbeRunner?: CommandProbeRunner;
+	exists?: (path: string) => boolean;
+}
 
 function loadOverrides(cwd: string): Record<string, Partial<LspServerDefinition>> {
 	const candidates = [join(cwd, "lsp.json"), join(cwd, ".pi", "lsp.json")];
@@ -42,48 +67,132 @@ function hasRootMarkers(cwd: string, markers: string[]): boolean {
 	return false;
 }
 
-export function resolveCommand(command: string, cwd: string): string | null {
+export function resolveCommand(command: string, cwd: string, options: CommandAvailabilityOptions = {}): string | null {
+	const platform = options.platform ?? process.platform;
+	const pathExt = options.pathExt ?? process.env.PATHEXT;
+	const exists = options.exists ?? existsSync;
 	for (const { markers, binDir } of LOCAL_BIN_PATHS) {
 		if (!hasRootMarkers(cwd, markers)) {
 			continue;
 		}
 		const localPath = join(cwd, binDir, command);
-		if (existsSync(localPath)) {
-			return localPath;
+		const resolvedLocalPath = resolveExecutablePath(localPath, {
+			platform,
+			pathExt,
+			exists,
+		});
+		if (resolvedLocalPath) {
+			return resolvedLocalPath;
 		}
 	}
 
-	return resolveOnPath(command);
+	return resolveCommandOnPath(command, {
+		platform,
+		envPath: options.envPath ?? process.env.PATH,
+		pathExt,
+		exists,
+	});
 }
 
-function resolveOnPath(command: string): string | null {
-	const envPath = process.env.PATH;
+function normalizeWindowsPathExtensions(pathExt: string | undefined): string[] {
+	const raw = pathExt ?? process.env.PATHEXT;
+	if (!raw) {
+		return DEFAULT_WINDOWS_PATH_EXTENSIONS;
+	}
+	const normalized = raw
+		.split(";")
+		.map((extension) => extension.trim().toLowerCase())
+		.filter((extension) => extension.length > 0)
+		.map((extension) => (extension.startsWith(".") ? extension : `.${extension}`));
+	return normalized.length > 0 ? normalized : DEFAULT_WINDOWS_PATH_EXTENSIONS;
+}
+
+function resolveExecutablePath(
+	commandPath: string,
+	options: { platform: NodeJS.Platform; pathExt?: string; exists: (path: string) => boolean },
+): string | null {
+	if (options.exists(commandPath)) {
+		return commandPath;
+	}
+
+	if (options.platform !== "win32") {
+		return null;
+	}
+
+	for (const extension of normalizeWindowsPathExtensions(options.pathExt)) {
+		const candidate = `${commandPath}${extension}`;
+		if (options.exists(candidate)) {
+			return candidate;
+		}
+	}
+
+	return null;
+}
+
+export function resolveCommandOnPath(command: string, options: ResolveCommandOnPathOptions = {}): string | null {
+	const platform = options.platform ?? process.platform;
+	const envPath = options.envPath ?? process.env.PATH;
+	const exists = options.exists ?? existsSync;
 	if (!envPath) {
 		return null;
 	}
-	const delimiter = process.platform === "win32" ? ";" : ":";
+
+	const delimiter = platform === "win32" ? ";" : ":";
 	for (const dir of envPath.split(delimiter)) {
 		if (!dir) {
 			continue;
 		}
 		const executable = join(dir, command);
-		if (existsSync(executable)) {
-			return executable;
-		}
-		if (process.platform === "win32") {
-			for (const ext of [".exe", ".cmd", ".bat"]) {
-				const candidate = executable + ext;
-				if (existsSync(candidate)) {
-					return candidate;
-				}
-			}
+		const resolvedPath = resolveExecutablePath(executable, {
+			platform,
+			pathExt: options.pathExt,
+			exists,
+		});
+		if (resolvedPath) {
+			return resolvedPath;
 		}
 	}
 	return null;
 }
 
-export function isCommandAvailable(command: string, cwd: string): boolean {
-	return resolveCommand(command, cwd) !== null || resolveOnPath(command) !== null;
+export function probeCommandInvocation(
+	commandPath: string,
+	cwd: string,
+	commandProbeRunner: CommandProbeRunner = spawnSync,
+): boolean {
+	const result = commandProbeRunner(commandPath, ["--version"], {
+		cwd,
+		env: process.env,
+		windowsHide: true,
+		stdio: "ignore",
+		timeout: COMMAND_PROBE_TIMEOUT_MS,
+	});
+	const error = result.error as NodeJS.ErrnoException | undefined;
+	if (!error) {
+		return true;
+	}
+
+	if (error.code === "ENOENT" || error.code === "EACCES") {
+		return false;
+	}
+
+	// ETIMEDOUT and other spawn errors still mean the executable resolved
+	// and attempted to launch, which is sufficient for availability checks.
+	return true;
+}
+
+export function isCommandAvailable(command: string, cwd: string, options: CommandAvailabilityOptions = {}): boolean {
+	const resolved = resolveCommand(command, cwd, options);
+	if (!resolved) {
+		return false;
+	}
+
+	const platform = options.platform ?? process.platform;
+	if (platform !== "win32") {
+		return true;
+	}
+
+	return probeCommandInvocation(resolved, cwd, options.commandProbeRunner);
 }
 
 export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
