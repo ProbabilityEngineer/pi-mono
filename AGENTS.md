@@ -11,6 +11,8 @@ read README.md, then ask which module(s) to work on. Based on the answer, read t
 - packages/pods/README.md
 - packages/web-ui/README.md
 
+When starting from a handoff or startup prompt, read `AGENTS.md` first before any implementation steps.
+
 ## Issue Tracking (bd)
 This repository uses **bd (beads)** for issue tracking.
 
