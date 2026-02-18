@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added LSP lazy language encounter pipeline with language detection, planner, installer abstraction, and per-session retry suppression for failed installs.
+- Added project-scoped LSP language state in settings (`lsp.languages`) with safe defaults and persistence helpers.
+
+### Changed
+
+- `read`, `edit`, and `write` tools now support path encounter callbacks and emit LSP setup notices/remediation in tool output when encounter automation runs.
+
 ## [0.53.0] - 2026-02-17
 
 ### Breaking Changes

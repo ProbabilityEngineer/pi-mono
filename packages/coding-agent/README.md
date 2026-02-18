@@ -247,6 +247,11 @@ Use `/settings` to modify common options, or edit JSON files directly:
 
 See [docs/settings.md](docs/settings.md) for all options.
 
+For LSP lazy enable/install:
+- New repos start with no languages enabled (`lsp.languages` is empty by default).
+- On first `read`/`edit`/`write` encounter of a supported language, pi can auto-enable and auto-install its server (controlled by `lsp.autoEnableOnEncounter` and `lsp.autoInstallOnEncounter`).
+- If auto-install fails or is unsupported, tool output includes remediation steps.
+
 ---
 
 ## Context Files
