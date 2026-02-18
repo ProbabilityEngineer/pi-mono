@@ -11,6 +11,25 @@ read README.md, then ask which module(s) to work on. Based on the answer, read t
 - packages/pods/README.md
 - packages/web-ui/README.md
 
+## Issue Tracking (bd)
+This repository uses **bd (beads)** for issue tracking.
+
+- Start from repo root (`pi-mono`) and use local `.beads` data for this repo only.
+- Run `bd ready` to find unblocked work before starting.
+- Claim work with `bd update <id> --status in_progress`.
+- Inspect details with `bd show <id>`.
+- Create follow-ups with `bd create "Title" --type task --priority 2`.
+- At session end, run `bd sync` after updating issue status.
+
+Quick reference:
+```bash
+bd ready
+bd show <id>
+bd update <id> --status in_progress
+bd close <id>
+bd sync
+```
+
 ## Code Quality
 - No `any` types unless absolutely necessary
 - Check node_modules for external API type definitions instead of guessing
@@ -214,3 +233,29 @@ git pull --rebase && git push
 - Resolve conflicts in YOUR files only
 - If conflict is in a file you didn't modify, abort and ask the user
 - NEVER force push
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds

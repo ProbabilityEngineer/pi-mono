@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import * as os from "node:os";
 import {
 	Box,
@@ -13,8 +14,17 @@ import {
 } from "@mariozechner/pi-tui";
 import stripAnsi from "strip-ansi";
 import type { ToolDefinition } from "../../../core/extensions/types.js";
-import { computeEditDiff, type EditDiffError, type EditDiffResult } from "../../../core/tools/edit-diff.js";
+import {
+	computeEditDiff,
+	type EditDiffError,
+	type EditDiffResult,
+	generateDiffString,
+	normalizeToLF,
+	stripBom,
+} from "../../../core/tools/edit-diff.js";
+import { applyHashlineEdits, type HashlineEditOperation } from "../../../core/tools/hashline.js";
 import { allTools } from "../../../core/tools/index.js";
+import { resolveToCwd } from "../../../core/tools/path-utils.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize } from "../../../core/tools/truncate.js";
 import { convertToPng } from "../../../utils/image-convert.js";
 import { sanitizeBinaryOutput } from "../../../utils/shell.js";
@@ -147,23 +157,36 @@ export class ToolExecutionComponent extends Container {
 	private maybeComputeEditDiff(): void {
 		if (this.toolName !== "edit") return;
 
-		const path = this.args?.path;
+		const path = str(this.args?.file_path ?? this.args?.path);
+		if (!path) return;
+
 		const oldText = this.args?.oldText;
 		const newText = this.args?.newText;
+		const edits = this.args?.edits;
 
-		// Need all three params to compute diff
-		if (!path || oldText === undefined || newText === undefined) return;
+		let argsKey: string | undefined;
+		let diffPromise: Promise<EditDiffResult | EditDiffError> | undefined;
 
-		// Create a key to track which args this computation is for
-		const argsKey = JSON.stringify({ path, oldText, newText });
+		// Replace-style edit preview
+		if (oldText !== undefined && newText !== undefined) {
+			argsKey = JSON.stringify({ path, oldText, newText });
+			diffPromise = computeEditDiff(path, oldText, newText, this.cwd);
+		}
+
+		// Hashline-style edit preview
+		if (!diffPromise && Array.isArray(edits)) {
+			argsKey = JSON.stringify({ path, edits });
+			diffPromise = this.computeHashlineEditDiff(path, edits);
+		}
+
+		if (!diffPromise || !argsKey) return;
 
 		// Skip if we already computed for these exact args
 		if (this.editDiffArgsKey === argsKey) return;
 
 		this.editDiffArgsKey = argsKey;
 
-		// Compute diff async
-		computeEditDiff(path, oldText, newText, this.cwd).then((result) => {
+		diffPromise.then((result) => {
 			// Only update if args haven't changed since we started
 			if (this.editDiffArgsKey === argsKey) {
 				this.editDiffPreview = result;
@@ -171,6 +194,33 @@ export class ToolExecutionComponent extends Container {
 				this.ui.requestRender();
 			}
 		});
+	}
+
+	private async computeHashlineEditDiff(path: string, edits: unknown[]): Promise<EditDiffResult | EditDiffError> {
+		const absolutePath = resolveToCwd(path, this.cwd);
+
+		let rawContent: string;
+		try {
+			rawContent = await readFile(absolutePath, "utf-8");
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return { error: `Could not read file for hashline preview: ${message}` };
+		}
+
+		const { text: content } = stripBom(rawContent);
+		const normalizedContent = normalizeToLF(content);
+
+		try {
+			const applied = applyHashlineEdits(normalizedContent, edits as HashlineEditOperation[]);
+			const diffResult = generateDiffString(normalizedContent, applied.content);
+			return {
+				diff: diffResult.diff,
+				firstChangedLine: applied.firstChangedLine ?? diffResult.firstChangedLine,
+			};
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return { error: message };
+		}
 	}
 
 	updateResult(

@@ -3,11 +3,12 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bashTool, createBashTool } from "../src/core/tools/bash.js";
-import { editTool } from "../src/core/tools/edit.js";
+import { createEditTool, editTool } from "../src/core/tools/edit.js";
 import { findTool } from "../src/core/tools/find.js";
-import { grepTool } from "../src/core/tools/grep.js";
+import { createGrepTool, grepTool } from "../src/core/tools/grep.js";
+import { computeLineHash } from "../src/core/tools/hashline.js";
 import { lsTool } from "../src/core/tools/ls.js";
-import { readTool } from "../src/core/tools/read.js";
+import { createReadTool, readTool } from "../src/core/tools/read.js";
 import { writeTool } from "../src/core/tools/write.js";
 import * as shellModule from "../src/utils/shell.js";
 
@@ -155,6 +156,18 @@ describe("Coding Agent Tools", () => {
 			expect(result.details?.truncation?.outputLines).toBe(2000);
 		});
 
+		it("should prefix text lines with hashline references when enabled", async () => {
+			const testFile = join(testDir, "hashline-read.txt");
+			writeFileSync(testFile, "alpha\nbeta");
+			const hashlineReadTool = createReadTool(testDir, { hashLines: true });
+
+			const result = await hashlineReadTool.execute("test-call-hash-read", { path: testFile });
+			const output = getTextOutput(result);
+
+			expect(output).toContain(`1:${computeLineHash(1, "alpha")}|alpha`);
+			expect(output).toContain(`2:${computeLineHash(2, "beta")}|beta`);
+		});
+
 		it("should detect image MIME type from file magic (not extension)", async () => {
 			const png1x1Base64 =
 				"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X2Z0AAAAASUVORK5CYII=";
@@ -256,6 +269,124 @@ describe("Coding Agent Tools", () => {
 					newText: "bar",
 				}),
 			).rejects.toThrow(/Found 3 occurrences/);
+		});
+
+		it("should apply hashline set_line edits", async () => {
+			const testFile = join(testDir, "edit-hashline-set.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-1", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
+		});
+
+		it("should reject stale hashline anchors", async () => {
+			const testFile = join(testDir, "edit-hashline-stale.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+			const wrongHash = computeLineHash(2, "beta") === "000000" ? "000001" : "000000";
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-2", {
+					path: testFile,
+					edits: [{ set_line: { anchor: `2:${wrongHash}`, new_text: "BETA" } }],
+				}),
+			).rejects.toThrow(/Hash mismatch/);
+		});
+
+		it("should recover hashline anchor when line number drifts", async () => {
+			const testFile = join(testDir, "edit-hashline-drift.txt");
+			writeFileSync(testFile, "intro\nalpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-3", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("intro\nalpha\nBETA\ngamma\n");
+		});
+
+		it("should accept noisy hashline anchor references", async () => {
+			const testFile = join(testDir, "edit-hashline-noisy-anchor.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-4", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `line 2:${computeLineHash(2, "beta")}|beta`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
+		});
+
+		it("should reject hashline-prefixed replacement text for set_line", async () => {
+			const testFile = join(testDir, "edit-hashline-set-prefixed.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-5", {
+					path: testFile,
+					edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "2:abcdef|BETA" } }],
+				}),
+			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
+		});
+
+		it("should reject hashline-prefixed replacement text for replace_lines", async () => {
+			const testFile = join(testDir, "edit-hashline-replace-prefixed.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-6", {
+					path: testFile,
+					edits: [
+						{
+							replace_lines: {
+								start_anchor: `1:${computeLineHash(1, "alpha")}`,
+								end_anchor: `2:${computeLineHash(2, "beta")}`,
+								new_text: "1:abcdef|ALPHA\n2:bbbbbb|BETA",
+							},
+						},
+					],
+				}),
+			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
+		});
+
+		it("should reject hashline-prefixed insert text for insert_after", async () => {
+			const testFile = join(testDir, "edit-hashline-insert-prefixed.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-7", {
+					path: testFile,
+					edits: [{ insert_after: { anchor: `2:${computeLineHash(2, "beta")}`, text: "3:abcdef|delta" } }],
+				}),
+			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
+		});
+
+		it("should accept 2-char hashline anchors for backward compatibility", async () => {
+			const testFile = join(testDir, "edit-hashline-compat-anchor.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+			const legacyAnchor = computeLineHash(2, "beta").slice(0, 2);
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-8", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `2:${legacyAnchor}`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
 		});
 	});
 
@@ -359,6 +490,26 @@ describe("Coding Agent Tools", () => {
 			expect(output).toContain("[1 matches limit reached. Use limit=2 for more, or refine pattern]");
 			// Ensure second match is not present
 			expect(output).not.toContain("match two");
+		});
+
+		it("should include hashline references when enabled", async () => {
+			const testFile = join(testDir, "hashline-grep.txt");
+			writeFileSync(testFile, "alpha\nmatch line\nomega");
+			const hashlineGrepTool = createGrepTool(testDir, { hashLines: true });
+
+			const result = await hashlineGrepTool.execute("test-call-grep-hash", {
+				pattern: "match",
+				path: testFile,
+			});
+
+			const output = getTextOutput(result);
+			expect(output).toContain(`hashline-grep.txt:2:${computeLineHash(2, "match line")}|match line`);
+		});
+	});
+
+	describe("hashline helpers", () => {
+		it("should generate 6-char hashes", () => {
+			expect(computeLineHash(1, "alpha")).toMatch(/^[0-9a-f]{6}$/);
 		});
 	});
 

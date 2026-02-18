@@ -11,15 +11,47 @@ import {
 	restoreLineEndings,
 	stripBom,
 } from "./edit-diff.js";
+import { applyHashlineEdits, type HashlineEditOperation } from "./hashline.js";
 import { resolveToCwd } from "./path-utils.js";
 
-const editSchema = Type.Object({
+const replaceEditSchema = Type.Object({
 	path: Type.String({ description: "Path to the file to edit (relative or absolute)" }),
 	oldText: Type.String({ description: "Exact text to find and replace (must match exactly)" }),
 	newText: Type.String({ description: "New text to replace the old text with" }),
 });
 
-export type EditToolInput = Static<typeof editSchema>;
+const hashlineSingleSchema = Type.Object({
+	set_line: Type.Object({
+		anchor: Type.String({ description: 'Line reference "LINE:HASH"' }),
+		new_text: Type.String({ description: "Replacement content (empty string deletes the line)" }),
+	}),
+});
+
+const hashlineRangeSchema = Type.Object({
+	replace_lines: Type.Object({
+		start_anchor: Type.String({ description: 'Start line reference "LINE:HASH"' }),
+		end_anchor: Type.String({ description: 'End line reference "LINE:HASH"' }),
+		new_text: Type.String({ description: "Replacement content (empty string deletes the range)" }),
+	}),
+});
+
+const hashlineInsertSchema = Type.Object({
+	insert_after: Type.Object({
+		anchor: Type.String({ description: 'Insert after this line reference "LINE:HASH"' }),
+		text: Type.String({ description: "Content to insert" }),
+	}),
+});
+
+const hashlineEditSchema = Type.Object({
+	path: Type.String({ description: "Path to the file to edit (relative or absolute)" }),
+	edits: Type.Array(Type.Union([hashlineSingleSchema, hashlineRangeSchema, hashlineInsertSchema])),
+});
+
+type EditSchema = typeof replaceEditSchema | typeof hashlineEditSchema;
+type ReplaceEditToolInput = Static<typeof replaceEditSchema>;
+type HashlineEditToolInput = Static<typeof hashlineEditSchema>;
+export type EditToolInput = ReplaceEditToolInput | HashlineEditToolInput;
+export type EditMode = "replace" | "hashline";
 
 export interface EditToolDetails {
 	/** Unified diff of the changes made */
@@ -50,22 +82,72 @@ const defaultEditOperations: EditOperations = {
 export interface EditToolOptions {
 	/** Custom operations for file editing. Default: local filesystem */
 	operations?: EditOperations;
+	/** Edit mode variant. Default: "replace" unless PI_EDIT_VARIANT=hashline. */
+	editMode?: EditMode;
 }
 
-export function createEditTool(cwd: string, options?: EditToolOptions): AgentTool<typeof editSchema> {
+function resolveEditMode(options?: EditToolOptions): EditMode {
+	if (options?.editMode) {
+		return options.editMode;
+	}
+	const envMode = process.env.PI_EDIT_VARIANT;
+	if (envMode === "hashline") {
+		return "hashline";
+	}
+	return "replace";
+}
+
+export function createEditTool(cwd: string, options?: EditToolOptions): AgentTool<EditSchema> {
 	const ops = options?.operations ?? defaultEditOperations;
+	const mode = resolveEditMode(options);
+	const schema = mode === "hashline" ? hashlineEditSchema : replaceEditSchema;
+	const description =
+		mode === "hashline"
+			? 'Edit files with hash-verified line references. Use "edits" with operations: set_line, replace_lines, insert_after.'
+			: "Edit a file by replacing exact text. The oldText must match exactly (including whitespace). Use this for precise, surgical edits.";
 
 	return {
 		name: "edit",
 		label: "edit",
-		description:
-			"Edit a file by replacing exact text. The oldText must match exactly (including whitespace). Use this for precise, surgical edits.",
-		parameters: editSchema,
-		execute: async (
-			_toolCallId: string,
-			{ path, oldText, newText }: { path: string; oldText: string; newText: string },
-			signal?: AbortSignal,
-		) => {
+		description,
+		parameters: schema,
+		execute: async (_toolCallId: string, params: EditToolInput, signal?: AbortSignal) => {
+			if (mode === "hashline") {
+				const { path, edits } = params as HashlineEditToolInput;
+				const absolutePath = resolveToCwd(path, cwd);
+				const parsedEdits = edits as HashlineEditOperation[];
+
+				// Validate file exists and can be accessed first for consistent errors.
+				try {
+					await ops.access(absolutePath);
+				} catch {
+					throw new Error(`File not found: ${path}`);
+				}
+
+				const rawContent = (await ops.readFile(absolutePath)).toString("utf-8");
+				const { bom, text: content } = stripBom(rawContent);
+				const originalEnding = detectLineEnding(content);
+				const normalizedContent = normalizeToLF(content);
+				const result = applyHashlineEdits(normalizedContent, parsedEdits);
+
+				if (result.content === normalizedContent) {
+					throw new Error(`No changes made to ${path}. The edits produced identical content.`);
+				}
+
+				const finalContent = bom + restoreLineEndings(result.content, originalEnding);
+				await ops.writeFile(absolutePath, finalContent);
+
+				const diffResult = generateDiffString(normalizedContent, result.content);
+				return {
+					content: [{ type: "text", text: `Successfully applied hashline edits to ${path}.` }],
+					details: {
+						diff: diffResult.diff,
+						firstChangedLine: result.firstChangedLine ?? diffResult.firstChangedLine,
+					},
+				};
+			}
+
+			const { path, oldText, newText } = params as ReplaceEditToolInput;
 			const absolutePath = resolveToCwd(path, cwd);
 
 			return new Promise<{

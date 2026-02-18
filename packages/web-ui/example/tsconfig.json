@@ -4,12 +4,16 @@
 		"module": "ES2022",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"moduleResolution": "bundler",
+		"baseUrl": "../../..",
 		"paths": {
-			"*": ["./*"],
-			"@mariozechner/pi-agent-core": ["../../agent/dist/index.d.ts"],
-			"@mariozechner/pi-ai": ["../../ai/dist/index.d.ts"],
-			"@mariozechner/pi-tui": ["../../tui/dist/index.d.ts"],
-			"@mariozechner/pi-web-ui": ["../dist/index.d.ts"]
+			"@mariozechner/pi-agent-core": ["packages/agent/src/index.ts"],
+			"@mariozechner/pi-agent-core/*": ["packages/agent/src/*"],
+			"@mariozechner/pi-ai": ["packages/ai/src/index.ts"],
+			"@mariozechner/pi-ai/*": ["packages/ai/src/*"],
+			"@mariozechner/pi-tui": ["packages/tui/src/index.ts"],
+			"@mariozechner/pi-tui/*": ["packages/tui/src/*"],
+			"@mariozechner/pi-web-ui": ["packages/web-ui/src/index.ts"],
+			"@mariozechner/pi-web-ui/*": ["packages/web-ui/src/*"]
 		},
 		"strict": true,
 		"skipLibCheck": true,
