@@ -59,7 +59,12 @@ export {
 	wrapToolsWithExtensions,
 } from "./extensions/index.js";
 export {
+	claudeSettingsHookConfigSource,
+	cliHooksConfigSource,
+	envHooksConfigSource,
+	gastownBuiltInHookConfigSource,
 	HOOK_EVENT_NAMES,
+	type HookConfigResolution,
 	type HookConfigSource,
 	type HookDefinition,
 	type HookEventName,
@@ -67,4 +72,6 @@ export {
 	type HookResolutionInput,
 	type HooksConfigMap,
 	parseHooksConfig,
+	type ResolveHooksConfigOptions,
+	resolveHooksConfig,
 } from "./hooks/index.js";
