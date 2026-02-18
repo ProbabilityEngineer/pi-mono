@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bashTool, createBashTool } from "../src/core/tools/bash.js";
 import { createEditTool, editTool } from "../src/core/tools/edit.js";
 import { findTool } from "../src/core/tools/find.js";
-import { grepTool } from "../src/core/tools/grep.js";
+import { createGrepTool, grepTool } from "../src/core/tools/grep.js";
 import { computeLineHash } from "../src/core/tools/hashline.js";
 import { lsTool } from "../src/core/tools/ls.js";
 import { createReadTool, readTool } from "../src/core/tools/read.js";
@@ -297,6 +297,34 @@ describe("Coding Agent Tools", () => {
 				}),
 			).rejects.toThrow(/Hash mismatch/);
 		});
+
+		it("should recover hashline anchor when line number drifts", async () => {
+			const testFile = join(testDir, "edit-hashline-drift.txt");
+			writeFileSync(testFile, "intro\nalpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-3", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("intro\nalpha\nBETA\ngamma\n");
+		});
+
+		it("should accept noisy hashline anchor references", async () => {
+			const testFile = join(testDir, "edit-hashline-noisy-anchor.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-4", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `line 2:${computeLineHash(2, "beta")}|beta`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
+		});
 	});
 
 	describe("bash tool", () => {
@@ -399,6 +427,20 @@ describe("Coding Agent Tools", () => {
 			expect(output).toContain("[1 matches limit reached. Use limit=2 for more, or refine pattern]");
 			// Ensure second match is not present
 			expect(output).not.toContain("match two");
+		});
+
+		it("should include hashline references when enabled", async () => {
+			const testFile = join(testDir, "hashline-grep.txt");
+			writeFileSync(testFile, "alpha\nmatch line\nomega");
+			const hashlineGrepTool = createGrepTool(testDir, { hashLines: true });
+
+			const result = await hashlineGrepTool.execute("test-call-grep-hash", {
+				pattern: "match",
+				path: testFile,
+			});
+
+			const output = getTextOutput(result);
+			expect(output).toContain(`hashline-grep.txt:2:${computeLineHash(2, "match line")}|match line`);
 		});
 	});
 
