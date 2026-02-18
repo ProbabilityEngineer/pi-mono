@@ -111,11 +111,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 		label: "edit",
 		description,
 		parameters: schema,
-		execute: async (
-			_toolCallId: string,
-			params: EditToolInput,
-			signal?: AbortSignal,
-		) => {
+		execute: async (_toolCallId: string, params: EditToolInput, signal?: AbortSignal) => {
 			if (mode === "hashline") {
 				const { path, edits } = params as HashlineEditToolInput;
 				const absolutePath = resolveToCwd(path, cwd);

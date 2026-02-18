@@ -17,7 +17,6 @@ export {
 	type EditToolOptions,
 	editTool,
 } from "./edit.js";
-export { applyHashlineEdits, computeLineHash, formatHashLines, parseLineRef, type HashlineEditOperation } from "./hashline.js";
 export {
 	createFindTool,
 	type FindOperations,
@@ -34,6 +33,13 @@ export {
 	type GrepToolOptions,
 	grepTool,
 } from "./grep.js";
+export {
+	applyHashlineEdits,
+	computeLineHash,
+	formatHashLines,
+	type HashlineEditOperation,
+	parseLineRef,
+} from "./hashline.js";
 export {
 	createLsTool,
 	type LsOperations,
