@@ -11,6 +11,8 @@ const mockLspRename = vi.fn();
 const mockLspFormatDocument = vi.fn();
 const mockFormatDiagnostics = vi.fn();
 const mockFormatWorkspaceEdit = vi.fn();
+const mockGetActiveClients = vi.fn();
+const mockShutdownAll = vi.fn();
 
 vi.mock("../src/lsp/index.js", () => ({
 	lspHover: (...args: unknown[]) => mockLspHover(...args),
@@ -23,6 +25,8 @@ vi.mock("../src/lsp/index.js", () => ({
 	lspFormatDocument: (...args: unknown[]) => mockLspFormatDocument(...args),
 	formatDiagnostics: (...args: unknown[]) => mockFormatDiagnostics(...args),
 	formatWorkspaceEdit: (...args: unknown[]) => mockFormatWorkspaceEdit(...args),
+	getActiveClients: (...args: unknown[]) => mockGetActiveClients(...args),
+	shutdownAll: (...args: unknown[]) => mockShutdownAll(...args),
 }));
 
 function getTextContent(result: { content: Array<{ type: string; text?: string }> }): string {
@@ -254,5 +258,24 @@ describe("lsp tool", () => {
 			file: "src/index.ts",
 		});
 		expect(getTextContent(result)).toContain("Applied formatting");
+	});
+
+	it("reports active clients for status action", async () => {
+		mockGetActiveClients.mockReturnValueOnce([
+			{ name: "typescript-language-server", status: "ready", fileTypes: ["typescript"] },
+		]);
+
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-status", { action: "status" });
+		expect(getTextContent(result)).toContain("Active LSP servers");
+		expect(getTextContent(result)).toContain("typescript-language-server");
+		expect(mockGetActiveClients).toHaveBeenCalledTimes(1);
+	});
+
+	it("reloads active lsp clients for reload action", async () => {
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-reload", { action: "reload" });
+		expect(getTextContent(result)).toContain("Reloaded LSP servers");
+		expect(mockShutdownAll).toHaveBeenCalledTimes(1);
 	});
 });
