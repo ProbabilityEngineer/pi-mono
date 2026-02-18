@@ -1,0 +1,58 @@
+{
+	"typescript-language-server": {
+		"command": "typescript-language-server",
+		"languages": ["typescript", "typescriptreact", "javascript", "javascriptreact"],
+		"installer": {
+			"kind": "npm",
+			"package": "typescript-language-server"
+		}
+	},
+	"vscode-json-language-server": {
+		"command": "vscode-json-language-server",
+		"languages": ["json", "jsonc"],
+		"installer": {
+			"kind": "npm",
+			"package": "vscode-langservers-extracted"
+		}
+	},
+	"vscode-css-language-server": {
+		"command": "vscode-css-language-server",
+		"languages": ["css", "scss", "sass", "less"],
+		"installer": {
+			"kind": "npm",
+			"package": "vscode-langservers-extracted"
+		}
+	},
+	"vscode-html-language-server": {
+		"command": "vscode-html-language-server",
+		"languages": ["html"],
+		"installer": {
+			"kind": "npm",
+			"package": "vscode-langservers-extracted"
+		}
+	},
+	"pyright": {
+		"command": "pyright-langserver",
+		"languages": ["python"],
+		"installer": {
+			"kind": "pip",
+			"package": "pyright"
+		}
+	},
+	"rust-analyzer": {
+		"command": "rust-analyzer",
+		"languages": ["rust"],
+		"installer": {
+			"kind": "unsupported",
+			"remediation": "Install rust-analyzer via rustup (`rustup component add rust-analyzer`) or your package manager."
+		}
+	},
+	"gopls": {
+		"command": "gopls",
+		"languages": ["go"],
+		"installer": {
+			"kind": "unsupported",
+			"remediation": "Install gopls with `go install golang.org/x/tools/gopls@latest`."
+		}
+	}
+}

@@ -45,6 +45,8 @@ export interface ReadToolOptions {
 	autoResizeImages?: boolean;
 	/** Whether text output should be prefixed as LINE:HASH|content. Default: false */
 	hashLines?: boolean;
+	/** Optional callback invoked when this tool accesses a file path. */
+	onPathAccess?: (path: string) => Promise<string | undefined> | string | undefined;
 	/** Custom operations for file reading. Default: local filesystem */
 	operations?: ReadOperations;
 }
@@ -64,6 +66,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 			{ path, offset, limit }: { path: string; offset?: number; limit?: number },
 			signal?: AbortSignal,
 		) => {
+			const lspNote = await options?.onPathAccess?.(path);
 			const absolutePath = resolveReadPath(path, cwd);
 
 			return new Promise<{ content: (TextContent | ImageContent)[]; details: ReadToolDetails | undefined }>(
@@ -117,6 +120,9 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 									if (dimensionNote) {
 										textNote += `\n${dimensionNote}`;
 									}
+									if (lspNote) {
+										textNote += `\n[LSP] ${lspNote}`;
+									}
 
 									content = [
 										{ type: "text", text: textNote },
@@ -124,8 +130,9 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 									];
 								} else {
 									const textNote = `Read image file [${mimeType}]`;
+									const renderedTextNote = lspNote ? `${textNote}\n[LSP] ${lspNote}` : textNote;
 									content = [
-										{ type: "text", text: textNote },
+										{ type: "text", text: renderedTextNote },
 										{ type: "image", data: base64, mimeType },
 									];
 								}
@@ -192,6 +199,9 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 								}
 
 								let renderedText = outputText;
+								if (lspNote) {
+									renderedText += `\n\n[LSP] ${lspNote}`;
+								}
 								if (hashLines) {
 									const noticeIndex = outputText.indexOf("\n\n[");
 									if (noticeIndex === -1) {

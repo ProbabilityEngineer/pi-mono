@@ -9,7 +9,7 @@ import { createGrepTool, grepTool } from "../src/core/tools/grep.js";
 import { computeLineHash } from "../src/core/tools/hashline.js";
 import { lsTool } from "../src/core/tools/ls.js";
 import { createReadTool, readTool } from "../src/core/tools/read.js";
-import { writeTool } from "../src/core/tools/write.js";
+import { createWriteTool, writeTool } from "../src/core/tools/write.js";
 import * as shellModule from "../src/utils/shell.js";
 
 // Helper to extract text from content blocks
@@ -200,6 +200,17 @@ describe("Coding Agent Tools", () => {
 			expect(output).toContain("definitely not a png");
 			expect(result.content.some((c: any) => c.type === "image")).toBe(false);
 		});
+
+		it("should append LSP encounter notes when provided", async () => {
+			const testFile = join(testDir, "lsp-note.txt");
+			writeFileSync(testFile, "hello");
+			const tool = createReadTool(testDir, {
+				onPathAccess: () => "Enabled typescript using typescript-language-server.",
+			});
+
+			const result = await tool.execute("test-call-lsp-note-read", { path: testFile });
+			expect(getTextOutput(result)).toContain("[LSP] Enabled typescript using typescript-language-server.");
+		});
 	});
 
 	describe("write tool", () => {
@@ -221,6 +232,16 @@ describe("Coding Agent Tools", () => {
 			const result = await writeTool.execute("test-call-4", { path: testFile, content });
 
 			expect(getTextOutput(result)).toContain("Successfully wrote");
+		});
+
+		it("should include LSP encounter notes when provided", async () => {
+			const testFile = join(testDir, "write-lsp-note.txt");
+			const tool = createWriteTool(testDir, {
+				onPathAccess: () => "Could not prepare python (pyright). install pyright manually",
+			});
+
+			const result = await tool.execute("test-call-write-lsp-note", { path: testFile, content: "data" });
+			expect(getTextOutput(result)).toContain("[LSP] Could not prepare python (pyright). install pyright manually");
 		});
 	});
 
@@ -269,6 +290,21 @@ describe("Coding Agent Tools", () => {
 					newText: "bar",
 				}),
 			).rejects.toThrow(/Found 3 occurrences/);
+		});
+
+		it("should include LSP encounter notes when provided", async () => {
+			const testFile = join(testDir, "edit-lsp-note.txt");
+			writeFileSync(testFile, "hello world");
+			const tool = createEditTool(testDir, {
+				onPathAccess: () => "Installed typescript-language-server and enabled typescript.",
+			});
+
+			const result = await tool.execute("test-call-edit-lsp-note", {
+				path: testFile,
+				oldText: "world",
+				newText: "pi",
+			});
+			expect(getTextOutput(result)).toContain("[LSP] Installed typescript-language-server and enabled typescript.");
 		});
 
 		it("should apply hashline set_line edits", async () => {

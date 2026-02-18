@@ -81,7 +81,7 @@ import { createFindTool, findTool } from "./find.js";
 import { createGrepTool, type GrepToolOptions, grepTool } from "./grep.js";
 import { createLsTool, lsTool } from "./ls.js";
 import { createReadTool, type ReadToolOptions, readTool } from "./read.js";
-import { createWriteTool, writeTool } from "./write.js";
+import { createWriteTool, type WriteToolOptions, writeTool } from "./write.js";
 
 /** Tool type (AgentTool from pi-ai) */
 export type Tool = AgentTool<any>;
@@ -114,6 +114,8 @@ export interface ToolsOptions {
 	edit?: EditToolOptions;
 	/** Options for the grep tool */
 	grep?: GrepToolOptions;
+	/** Options for the write tool */
+	write?: WriteToolOptions;
 }
 
 /**
@@ -124,7 +126,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
 		createReadTool(cwd, options?.read),
 		createBashTool(cwd, options?.bash),
 		createEditTool(cwd, options?.edit),
-		createWriteTool(cwd),
+		createWriteTool(cwd, options?.write),
 	];
 }
 
@@ -148,7 +150,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 		read: createReadTool(cwd, options?.read),
 		bash: createBashTool(cwd, options?.bash),
 		edit: createEditTool(cwd, options?.edit),
-		write: createWriteTool(cwd),
+		write: createWriteTool(cwd, options?.write),
 		grep: createGrepTool(cwd, options?.grep),
 		find: createFindTool(cwd),
 		ls: createLsTool(cwd),
