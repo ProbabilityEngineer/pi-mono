@@ -1965,11 +1965,14 @@ export class AgentSession {
 	}): void {
 		const autoResizeImages = this.settingsManager.getImageAutoResize();
 		const shellCommandPrefix = this.settingsManager.getShellCommandPrefix();
+		const editMode = this.settingsManager.getEditMode();
+		const readHashLines = this.settingsManager.getReadHashLines() || editMode === "hashline";
 		const baseTools = this._baseToolsOverride
 			? this._baseToolsOverride
 			: createAllTools(this._cwd, {
-					read: { autoResizeImages },
+					read: { autoResizeImages, hashLines: readHashLines },
 					bash: { commandPrefix: shellCommandPrefix },
+					edit: { editMode },
 				});
 
 		this._baseToolRegistry = new Map(Object.entries(baseTools).map(([name, tool]) => [name, tool as AgentTool]));

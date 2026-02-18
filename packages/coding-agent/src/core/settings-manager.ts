@@ -42,6 +42,10 @@ export interface MarkdownSettings {
 	codeBlockIndent?: string; // default: "  "
 }
 
+export interface EditSettings {
+	mode?: "replace" | "hashline" | "patch";
+}
+
 export type TransportSetting = Transport;
 
 /**
@@ -91,6 +95,8 @@ export interface Settings {
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
+	edit?: EditSettings;
+	readHashLines?: boolean; // default: false - include LINE:HASH prefixes in read output
 }
 
 /** Deep merge settings: project/overrides take precedence, nested objects merge recursively */
@@ -884,5 +890,14 @@ export class SettingsManager {
 
 	getCodeBlockIndent(): string {
 		return this.settings.markdown?.codeBlockIndent ?? "  ";
+	}
+
+	getEditMode(): "replace" | "hashline" {
+		const mode = this.settings.edit?.mode;
+		return mode === "hashline" ? "hashline" : "replace";
+	}
+
+	getReadHashLines(): boolean {
+		return this.settings.readHashLines ?? false;
 	}
 }
