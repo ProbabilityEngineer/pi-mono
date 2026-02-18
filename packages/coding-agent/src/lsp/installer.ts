@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { isCommandAvailable } from "./config.js";
+import { type CommandAvailabilityOptions, isCommandAvailable } from "./config.js";
 import type { ResolvedLspServer } from "./types.js";
 
 export interface InstallCommandResult {
@@ -18,6 +18,7 @@ export type InstallCommandRunner = (
 export interface EnsureServerInstalledOptions {
 	commandRunner?: InstallCommandRunner;
 	commandAvailable?: (command: string, cwd: string) => boolean;
+	commandAvailabilityOptions?: CommandAvailabilityOptions;
 	timeoutMs?: number;
 }
 
@@ -36,7 +37,9 @@ export async function ensureServerInstalled(
 	options: EnsureServerInstalledOptions = {},
 ): Promise<EnsureServerInstalledResult> {
 	const commandAvailable =
-		options.commandAvailable ?? ((command: string, commandCwd: string) => isCommandAvailable(command, commandCwd));
+		options.commandAvailable ??
+		((command: string, commandCwd: string) =>
+			isCommandAvailable(command, commandCwd, options.commandAvailabilityOptions));
 	const timeoutMs = options.timeoutMs ?? 30_000;
 	const commandRunner = options.commandRunner ?? runInstallCommand;
 
