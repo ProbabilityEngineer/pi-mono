@@ -5,6 +5,7 @@ import { spawn } from "child_process";
 import { readFileSync, statSync } from "fs";
 import path from "path";
 import { ensureTool } from "../../utils/tools-manager.js";
+import { computeLineHash } from "./hashline.js";
 import { resolveToCwd } from "./path-utils.js";
 import {
 	DEFAULT_MAX_BYTES,
@@ -58,15 +59,18 @@ const defaultGrepOperations: GrepOperations = {
 export interface GrepToolOptions {
 	/** Custom operations for grep. Default: local filesystem + ripgrep */
 	operations?: GrepOperations;
+	/** Whether text output should include line hash references. Default: false */
+	hashLines?: boolean;
 }
 
 export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentTool<typeof grepSchema> {
 	const customOps = options?.operations;
+	const hashLines = options?.hashLines ?? false;
 
 	return {
 		name: "grep",
 		label: "grep",
-		description: `Search file contents for a pattern. Returns matching lines with file paths and line numbers. Respects .gitignore. Output is truncated to ${DEFAULT_LIMIT} matches or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Long lines are truncated to ${GREP_MAX_LINE_LENGTH} chars.`,
+		description: `Search file contents for a pattern. Returns matching lines with file paths and line numbers. Respects .gitignore. Output is truncated to ${DEFAULT_LIMIT} matches or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Long lines are truncated to ${GREP_MAX_LINE_LENGTH} chars.${hashLines ? " In hashline mode, lines include hash refs as path:LINE:HASH|content (and path-LINE-HASH|content for context)." : ""}`,
 		parameters: grepSchema,
 		execute: async (
 			_toolCallId: string,
@@ -218,6 +222,16 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 								const { text: truncatedText, wasTruncated } = truncateLine(sanitized);
 								if (wasTruncated) {
 									linesTruncated = true;
+								}
+
+								if (hashLines) {
+									const lineHash = computeLineHash(current, sanitized);
+									if (isMatchLine) {
+										block.push(`${relativePath}:${current}:${lineHash}|${truncatedText}`);
+									} else {
+										block.push(`${relativePath}-${current}-${lineHash}|${truncatedText}`);
+									}
+									continue;
 								}
 
 								if (isMatchLine) {

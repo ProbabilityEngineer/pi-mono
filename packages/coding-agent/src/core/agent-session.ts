@@ -2179,11 +2179,17 @@ export class AgentSession {
 		const autoResizeImages = this.settingsManager.getImageAutoResize();
 		const shellCommandPrefix = this.settingsManager.getShellCommandPrefix();
 		const editMode = this.settingsManager.getEditMode();
-		const readHashLines = this.settingsManager.getReadHashLines() || editMode === "hashline";
+		const defaultActiveToolNames = this._baseToolsOverride
+			? Object.keys(this._baseToolsOverride)
+			: ["read", "bash", "edit", "write"];
+		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
+		const editToolActive = baseActiveToolNames.includes("edit");
+		const readHashLines = editToolActive && (this.settingsManager.getReadHashLines() || editMode === "hashline");
 		const baseTools = this._baseToolsOverride
 			? this._baseToolsOverride
 			: createAllTools(this._cwd, {
 					read: { autoResizeImages, hashLines: readHashLines },
+					grep: { hashLines: readHashLines },
 					bash: { commandPrefix: shellCommandPrefix },
 					edit: { editMode },
 				});
@@ -2217,14 +2223,15 @@ export class AgentSession {
 			this._applyExtensionBindings(this._extensionRunner);
 		}
 
-		const defaultActiveToolNames = this._baseToolsOverride
-			? Object.keys(this._baseToolsOverride)
-			: ["read", "bash", "edit", "write"];
-		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		this._refreshToolRegistry({
 			activeToolNames: baseActiveToolNames,
 			includeAllExtensionTools: options.includeAllExtensionTools,
 		});
+
+		// Rebuild system prompt with active tool names
+		const systemPromptToolNames = baseActiveToolNames.filter((name) => this._baseToolRegistry.has(name));
+		this._baseSystemPrompt = this._rebuildSystemPrompt(systemPromptToolNames);
+		this.agent.setSystemPrompt(this._baseSystemPrompt);
 	}
 
 	async reload(): Promise<void> {
