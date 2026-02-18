@@ -20,6 +20,7 @@ import type {
 	LspRenameResult,
 	LspWorkspaceSymbolsResult,
 	Position,
+	ResolvedLspServer,
 	ServerConfig,
 	SymbolInformation,
 	TextEdit,
@@ -61,6 +62,8 @@ export interface LspDiagnosticsInput {
 	filePath: string;
 	signal?: AbortSignal;
 }
+
+export type LspServerOperationRole = "intelligence" | "linter";
 
 function toPosition(line: number, column: number): Position {
 	return {
@@ -116,40 +119,50 @@ async function resolveClientForFile(cwd: string, filePath: string) {
 		throw new Error(`No language detected for ${filePath}`);
 	}
 
-	const server = getServersForLanguage(languageId, cwd)[0];
+	const server = pickServerForOperation(getServersForLanguage(languageId, cwd), "intelligence");
 	if (!server) {
 		throw new Error(`No configured LSP server for language ${languageId}`);
 	}
 
-	const config: ServerConfig = {
-		command: server.command,
-		args: server.args,
-		resolvedCommand: resolveCommand(server.command, cwd) ?? undefined,
-		fileTypes: server.languages,
-		initOptions: server.initOptions,
-		settings: server.settings,
-	};
-	const client = await getOrCreateClient(config, cwd);
+	const client = await getOrCreateClient(toServerConfig(server, cwd), cwd);
 	await ensureFileOpen(client, absolutePath);
 	return { absolutePath, client, serverName: server.name };
 }
 
-async function resolveAnyClient(cwd: string) {
+async function resolveAnyClient(cwd: string, role: LspServerOperationRole = "intelligence") {
 	const servers = Object.values(loadLspServers(cwd)).sort((a, b) => a.name.localeCompare(b.name));
-	const server = servers[0];
+	const server = pickServerForOperation(servers, role);
 	if (!server) {
 		throw new Error("No configured LSP servers");
 	}
-	const config: ServerConfig = {
+	const client = await getOrCreateClient(toServerConfig(server, cwd), cwd);
+	return { client, serverName: server.name };
+}
+
+export function pickServerForOperation(
+	servers: ResolvedLspServer[],
+	role: LspServerOperationRole,
+): ResolvedLspServer | undefined {
+	if (servers.length === 0) {
+		return undefined;
+	}
+	if (role === "linter") {
+		return servers.find((server) => server.isLinter) ?? servers[0];
+	}
+	return servers.find((server) => !server.isLinter) ?? servers[0];
+}
+
+function toServerConfig(server: ResolvedLspServer, cwd: string): ServerConfig {
+	return {
 		command: server.command,
 		args: server.args,
 		resolvedCommand: resolveCommand(server.command, cwd) ?? undefined,
 		fileTypes: server.languages,
+		rootMarkers: server.rootMarkers,
 		initOptions: server.initOptions,
 		settings: server.settings,
+		isLinter: server.isLinter,
 	};
-	const client = await getOrCreateClient(config, cwd);
-	return { client, serverName: server.name };
 }
 
 export async function lspHover(input: LspOperationInput): Promise<LspHoverResult> {
@@ -232,7 +245,7 @@ export async function lspDocumentSymbols(
 }
 
 export async function lspWorkspaceSymbols(input: LspWorkspaceSymbolsInput): Promise<LspWorkspaceSymbolsResult> {
-	const { client, serverName } = await resolveAnyClient(input.cwd);
+	const { client, serverName } = await resolveAnyClient(input.cwd, "intelligence");
 	const result = (await sendRequest(client, "workspace/symbol", { query: input.query }, input.signal)) as
 		| SymbolInformation[]
 		| null;
@@ -261,7 +274,18 @@ async function waitForDiagnostics(
 }
 
 export async function lspDiagnostics(input: LspDiagnosticsInput): Promise<LspDiagnosticsResult> {
-	const { absolutePath, client, serverName } = await resolveClientForFile(input.cwd, input.filePath);
+	const absolutePath = resolve(input.cwd, input.filePath);
+	const languageId = detectLanguageIdFromPath(absolutePath);
+	if (!languageId) {
+		throw new Error(`No language detected for ${input.filePath}`);
+	}
+	const server = pickServerForOperation(getServersForLanguage(languageId, input.cwd), "linter");
+	if (!server) {
+		throw new Error(`No configured LSP server for language ${languageId}`);
+	}
+	const client = await getOrCreateClient(toServerConfig(server, input.cwd), input.cwd);
+	await ensureFileOpen(client, absolutePath);
+	const serverName = server.name;
 	const uri = fileToUri(absolutePath);
 	const before = client.diagnosticsVersion;
 	await notifySaved(client, absolutePath);
@@ -312,7 +336,18 @@ export async function lspRename(input: LspRenameInput): Promise<LspRenameResult>
 }
 
 export async function lspFormatDocument(input: LspFormatInput): Promise<LspFormatResult> {
-	const { absolutePath, client, serverName } = await resolveClientForFile(input.cwd, input.filePath);
+	const absolutePath = resolve(input.cwd, input.filePath);
+	const languageId = detectLanguageIdFromPath(absolutePath);
+	if (!languageId) {
+		throw new Error(`No language detected for ${input.filePath}`);
+	}
+	const server = pickServerForOperation(getServersForLanguage(languageId, input.cwd), "linter");
+	if (!server) {
+		throw new Error(`No configured LSP server for language ${languageId}`);
+	}
+	const client = await getOrCreateClient(toServerConfig(server, input.cwd), input.cwd);
+	await ensureFileOpen(client, absolutePath);
+	const serverName = server.name;
 	const edits = (await sendRequest(
 		client,
 		"textDocument/formatting",
