@@ -10,6 +10,7 @@ export interface InstallerDefinition {
 
 export interface LspServerDefinition {
 	command: string;
+	args?: string[];
 	languages: string[];
 	installer?: InstallerDefinition;
 	disabled?: boolean;
@@ -22,6 +23,7 @@ export interface LspConfigFile {
 export interface ResolvedLspServer {
 	name: string;
 	command: string;
+	args?: string[];
 	languages: string[];
 	installer?: InstallerDefinition;
 }
@@ -120,4 +122,84 @@ export interface LspServerStatus {
 	status: "connecting" | "ready" | "error";
 	fileTypes: string[];
 	error?: string;
+}
+
+export interface Position {
+	line: number;
+	character: number;
+}
+
+export interface Range {
+	start: Position;
+	end: Position;
+}
+
+export interface Location {
+	uri: string;
+	range: Range;
+}
+
+export interface LocationLink {
+	originSelectionRange?: Range;
+	targetUri: string;
+	targetRange: Range;
+	targetSelectionRange: Range;
+}
+
+export interface MarkupContent {
+	kind: "plaintext" | "markdown";
+	value: string;
+}
+
+export type MarkedString = string | { language: string; value: string };
+
+export interface Hover {
+	contents: MarkupContent | MarkedString | MarkedString[];
+	range?: Range;
+}
+
+export interface DocumentSymbol {
+	name: string;
+	detail?: string;
+	kind: number;
+	tags?: number[];
+	deprecated?: boolean;
+	range: Range;
+	selectionRange: Range;
+	children?: DocumentSymbol[];
+}
+
+export interface SymbolInformation {
+	name: string;
+	kind: number;
+	tags?: number[];
+	deprecated?: boolean;
+	location: Location;
+	containerName?: string;
+}
+
+export interface LspHoverResult {
+	server: string;
+	contents: string;
+	range?: Range;
+}
+
+export interface LspDefinitionResult {
+	server: string;
+	locations: Location[];
+}
+
+export interface LspReferencesResult {
+	server: string;
+	references: Location[];
+}
+
+export interface LspDocumentSymbolsResult {
+	server: string;
+	symbols: Array<DocumentSymbol | SymbolInformation>;
+}
+
+export interface LspWorkspaceSymbolsResult {
+	server: string;
+	symbols: SymbolInformation[];
 }

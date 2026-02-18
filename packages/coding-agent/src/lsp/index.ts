@@ -1,4 +1,14 @@
 export {
+	type LspOperationInput,
+	type LspReferencesInput,
+	type LspWorkspaceSymbolsInput,
+	lspDefinition,
+	lspDocumentSymbols,
+	lspHover,
+	lspReferences,
+	lspWorkspaceSymbols,
+} from "./api.js";
+export {
 	ensureFileOpen,
 	getActiveClients,
 	getOrCreateClient,
@@ -36,11 +46,18 @@ export {
 } from "./lspmux.js";
 export { type PlanLanguageEncounterInput, planLanguageEncounter } from "./planner.js";
 export type {
+	DocumentSymbol,
+	Hover,
 	InstallerDefinition,
 	InstallerKind,
+	Location,
+	LocationLink,
 	LspClient,
 	LspClientTransport,
 	LspConfigFile,
+	LspDefinitionResult,
+	LspDocumentSymbolsResult,
+	LspHoverResult,
 	LspJsonRpcNotification,
 	LspJsonRpcRequest,
 	LspJsonRpcResponse,
@@ -48,10 +65,17 @@ export type {
 	LspmuxWrappedCommand,
 	LspPlannerAction,
 	LspPlannerResult,
+	LspReferencesResult,
 	LspServerDefinition,
 	LspServerStatus,
+	LspWorkspaceSymbolsResult,
+	MarkedString,
+	MarkupContent,
 	OpenFileState,
 	PendingLspRequest,
+	Position,
+	Range,
 	ResolvedLspServer,
 	ServerConfig,
+	SymbolInformation,
 } from "./types.js";
