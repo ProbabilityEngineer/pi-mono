@@ -325,6 +325,53 @@ describe("Coding Agent Tools", () => {
 			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
 			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
 		});
+
+		it("should reject hashline-prefixed replacement text for set_line", async () => {
+			const testFile = join(testDir, "edit-hashline-set-prefixed.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-5", {
+					path: testFile,
+					edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "2:abcdef|BETA" } }],
+				}),
+			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
+		});
+
+		it("should reject hashline-prefixed replacement text for replace_lines", async () => {
+			const testFile = join(testDir, "edit-hashline-replace-prefixed.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-6", {
+					path: testFile,
+					edits: [
+						{
+							replace_lines: {
+								start_anchor: `1:${computeLineHash(1, "alpha")}`,
+								end_anchor: `2:${computeLineHash(2, "beta")}`,
+								new_text: "1:abcdef|ALPHA\n2:bbbbbb|BETA",
+							},
+						},
+					],
+				}),
+			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
+		});
+
+		it("should reject hashline-prefixed insert text for insert_after", async () => {
+			const testFile = join(testDir, "edit-hashline-insert-prefixed.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-7", {
+					path: testFile,
+					edits: [{ insert_after: { anchor: `2:${computeLineHash(2, "beta")}`, text: "3:abcdef|delta" } }],
+				}),
+			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
+		});
 	});
 
 	describe("bash tool", () => {
