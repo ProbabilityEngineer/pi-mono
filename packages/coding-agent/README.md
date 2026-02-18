@@ -150,7 +150,7 @@ Type `/` in the editor to trigger commands. [Extensions](#extensions) can regist
 | `/login`, `/logout` | OAuth authentication |
 | `/model` | Switch models |
 | `/scoped-models` | Enable/disable models for Ctrl+P cycling |
-| `/settings` | Thinking level, theme, message delivery, transport |
+| `/settings` | Thinking level, theme, hashline mode, LSP, message delivery, transport |
 | `/resume` | Pick from previous sessions |
 | `/new` | Start a new session |
 | `/name <name>` | Set session display name |
@@ -246,6 +246,12 @@ Use `/settings` to modify common options, or edit JSON files directly:
 | `.pi/settings.json` | Project (overrides global) |
 
 See [docs/settings.md](docs/settings.md) for all options.
+
+Hashline and LSP support were backported from [Can Bölük's Oh-My-Pi](https://github.com/can1357/oh-my-pi). You can toggle both in `/settings` (Hashline mode and LSP).
+
+`/settings` controls:
+- Hashline via `edit.mode` (`"hashline"` or `"replace"`)
+- LSP via `lsp.enabled` (`true` or `false`)
 
 For LSP lazy enable/install:
 - New repos start with no languages enabled (`lsp.languages` is empty by default).
