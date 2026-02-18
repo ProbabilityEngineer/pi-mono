@@ -289,11 +289,12 @@ describe("Coding Agent Tools", () => {
 			const testFile = join(testDir, "edit-hashline-stale.txt");
 			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
 			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+			const wrongHash = computeLineHash(2, "beta") === "000000" ? "000001" : "000000";
 
 			await expect(
 				hashlineEditTool.execute("test-call-hash-edit-2", {
 					path: testFile,
-					edits: [{ set_line: { anchor: "2:ff", new_text: "BETA" } }],
+					edits: [{ set_line: { anchor: `2:${wrongHash}`, new_text: "BETA" } }],
 				}),
 			).rejects.toThrow(/Hash mismatch/);
 		});
@@ -371,6 +372,21 @@ describe("Coding Agent Tools", () => {
 					edits: [{ insert_after: { anchor: `2:${computeLineHash(2, "beta")}`, text: "3:abcdef|delta" } }],
 				}),
 			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
+		});
+
+		it("should accept 2-char hashline anchors for backward compatibility", async () => {
+			const testFile = join(testDir, "edit-hashline-compat-anchor.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+			const legacyAnchor = computeLineHash(2, "beta").slice(0, 2);
+
+			const result = await hashlineEditTool.execute("test-call-hash-edit-8", {
+				path: testFile,
+				edits: [{ set_line: { anchor: `2:${legacyAnchor}`, new_text: "BETA" } }],
+			});
+
+			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
+			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
 		});
 	});
 
@@ -488,6 +504,12 @@ describe("Coding Agent Tools", () => {
 
 			const output = getTextOutput(result);
 			expect(output).toContain(`hashline-grep.txt:2:${computeLineHash(2, "match line")}|match line`);
+		});
+	});
+
+	describe("hashline helpers", () => {
+		it("should generate 6-char hashes", () => {
+			expect(computeLineHash(1, "alpha")).toMatch(/^[0-9a-f]{6}$/);
 		});
 	});
 
