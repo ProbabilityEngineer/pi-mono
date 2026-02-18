@@ -33,6 +33,14 @@
 			"javascript",
 			"javascriptreact"
 		],
+		"initOptions": {
+			"hostInfo": "pi-coding-agent",
+			"preferences": {
+				"includeInlayParameterNameHints": "all",
+				"includeInlayVariableTypeHints": true,
+				"includeInlayFunctionParameterTypeHints": true
+			}
+		},
 		"installer": {
 			"kind": "npm",
 			"package": "typescript-language-server"
