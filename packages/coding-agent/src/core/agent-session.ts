@@ -2271,6 +2271,9 @@ export class AgentSession {
 						onPathAccess: async (path) => await this._handleLanguageEncounter(path),
 					},
 				});
+		if (!lspEnabled) {
+			delete (baseTools as Partial<Record<string, AgentTool>>).lsp;
+		}
 
 		if (!lspEnabled) {
 			delete (baseTools as Partial<Record<string, AgentTool>>).lsp;
