@@ -902,7 +902,16 @@ export class SettingsManager {
 
 	getEditMode(): "replace" | "hashline" {
 		const mode = this.settings.edit?.mode;
-		return mode === "hashline" ? "hashline" : "replace";
+		return mode === "replace" ? "replace" : "hashline";
+	}
+
+	setEditMode(mode: "replace" | "hashline"): void {
+		if (!this.globalSettings.edit) {
+			this.globalSettings.edit = {};
+		}
+		this.globalSettings.edit.mode = mode;
+		this.markModified("edit", "mode");
+		this.save();
 	}
 
 	getReadHashLines(): boolean {

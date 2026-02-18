@@ -2122,6 +2122,19 @@ export class AgentSession {
 		}
 	}
 
+	/**
+	 * Rebuild active tools/runtime using current in-memory settings.
+	 * Applies immediately for the current session without reloading resources from disk.
+	 */
+	rebuildRuntimeFromSettings(): void {
+		const previousFlagValues = this._extensionRunner?.getFlagValues();
+		this._buildRuntime({
+			activeToolNames: this.getActiveToolNames(),
+			flagValues: previousFlagValues,
+			includeAllExtensionTools: true,
+		});
+	}
+
 	// =========================================================================
 	// Auto-Retry
 	// =========================================================================

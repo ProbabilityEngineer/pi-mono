@@ -3025,12 +3025,18 @@ export class InteractiveMode {
 
 	private showSettingsSelector(): void {
 		this.showSelector((done) => {
+			const rebuildSessionRuntime = () => {
+				this.session.rebuildRuntimeFromSettings();
+				this.setupAutocomplete(this.fdPath);
+			};
 			const selector = new SettingsSelectorComponent(
 				{
 					autoCompact: this.session.autoCompactionEnabled,
+					hashlineMode: this.settingsManager.getEditMode() === "hashline",
 					showImages: this.settingsManager.getShowImages(),
 					autoResizeImages: this.settingsManager.getImageAutoResize(),
 					blockImages: this.settingsManager.getBlockImages(),
+					lspEnabled: this.settingsManager.getLspEnabled(),
 					enableSkillCommands: this.settingsManager.getEnableSkillCommands(),
 					steeringMode: this.session.steeringMode,
 					followUpMode: this.session.followUpMode,
@@ -3052,6 +3058,11 @@ export class InteractiveMode {
 					onAutoCompactChange: (enabled) => {
 						this.session.setAutoCompactionEnabled(enabled);
 						this.footer.setAutoCompactEnabled(enabled);
+						rebuildSessionRuntime();
+					},
+					onHashlineModeChange: (enabled) => {
+						this.settingsManager.setEditMode(enabled ? "hashline" : "replace");
+						rebuildSessionRuntime();
 					},
 					onShowImagesChange: (enabled) => {
 						this.settingsManager.setShowImages(enabled);
@@ -3060,31 +3071,42 @@ export class InteractiveMode {
 								child.setShowImages(enabled);
 							}
 						}
+						rebuildSessionRuntime();
 					},
 					onAutoResizeImagesChange: (enabled) => {
 						this.settingsManager.setImageAutoResize(enabled);
+						rebuildSessionRuntime();
 					},
 					onBlockImagesChange: (blocked) => {
 						this.settingsManager.setBlockImages(blocked);
+						rebuildSessionRuntime();
+					},
+					onLspEnabledChange: (enabled) => {
+						this.settingsManager.setLspEnabled(enabled);
+						rebuildSessionRuntime();
 					},
 					onEnableSkillCommandsChange: (enabled) => {
 						this.settingsManager.setEnableSkillCommands(enabled);
-						this.setupAutocomplete(this.fdPath);
+						rebuildSessionRuntime();
 					},
 					onSteeringModeChange: (mode) => {
 						this.session.setSteeringMode(mode);
+						rebuildSessionRuntime();
 					},
 					onFollowUpModeChange: (mode) => {
 						this.session.setFollowUpMode(mode);
+						rebuildSessionRuntime();
 					},
 					onTransportChange: (transport) => {
 						this.settingsManager.setTransport(transport);
 						this.session.agent.setTransport(transport);
+						rebuildSessionRuntime();
 					},
 					onThinkingLevelChange: (level) => {
 						this.session.setThinkingLevel(level);
 						this.footer.invalidate();
 						this.updateEditorBorderColor();
+						rebuildSessionRuntime();
 					},
 					onThemeChange: (themeName) => {
 						const result = setTheme(themeName, true);
@@ -3093,6 +3115,7 @@ export class InteractiveMode {
 						if (!result.success) {
 							this.showError(`Failed to load theme "${themeName}": ${result.error}\nFell back to dark theme.`);
 						}
+						rebuildSessionRuntime();
 					},
 					onThemePreview: (themeName) => {
 						const result = setTheme(themeName, true);
@@ -3111,19 +3134,24 @@ export class InteractiveMode {
 						}
 						this.chatContainer.clear();
 						this.rebuildChatFromMessages();
+						rebuildSessionRuntime();
 					},
 					onCollapseChangelogChange: (collapsed) => {
 						this.settingsManager.setCollapseChangelog(collapsed);
+						rebuildSessionRuntime();
 					},
 					onQuietStartupChange: (enabled) => {
 						this.settingsManager.setQuietStartup(enabled);
+						rebuildSessionRuntime();
 					},
 					onDoubleEscapeActionChange: (action) => {
 						this.settingsManager.setDoubleEscapeAction(action);
+						rebuildSessionRuntime();
 					},
 					onShowHardwareCursorChange: (enabled) => {
 						this.settingsManager.setShowHardwareCursor(enabled);
 						this.ui.setShowHardwareCursor(enabled);
+						rebuildSessionRuntime();
 					},
 					onEditorPaddingXChange: (padding) => {
 						this.settingsManager.setEditorPaddingX(padding);
@@ -3131,6 +3159,7 @@ export class InteractiveMode {
 						if (this.editor !== this.defaultEditor && this.editor.setPaddingX !== undefined) {
 							this.editor.setPaddingX(padding);
 						}
+						rebuildSessionRuntime();
 					},
 					onAutocompleteMaxVisibleChange: (maxVisible) => {
 						this.settingsManager.setAutocompleteMaxVisible(maxVisible);
@@ -3138,10 +3167,12 @@ export class InteractiveMode {
 						if (this.editor !== this.defaultEditor && this.editor.setAutocompleteMaxVisible !== undefined) {
 							this.editor.setAutocompleteMaxVisible(maxVisible);
 						}
+						rebuildSessionRuntime();
 					},
 					onClearOnShrinkChange: (enabled) => {
 						this.settingsManager.setClearOnShrink(enabled);
 						this.ui.setClearOnShrink(enabled);
+						rebuildSessionRuntime();
 					},
 					onCancel: () => {
 						done();
