@@ -84,6 +84,8 @@ export interface EditToolOptions {
 	operations?: EditOperations;
 	/** Edit mode variant. Default: "replace" unless PI_EDIT_VARIANT=hashline. */
 	editMode?: EditMode;
+	/** Optional callback invoked when this tool accesses a file path. */
+	onPathAccess?: (path: string) => Promise<string | undefined> | string | undefined;
 }
 
 function resolveEditMode(options?: EditToolOptions): EditMode {
@@ -114,6 +116,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 		execute: async (_toolCallId: string, params: EditToolInput, signal?: AbortSignal) => {
 			if (mode === "hashline") {
 				const { path, edits } = params as HashlineEditToolInput;
+				const lspNote = await options?.onPathAccess?.(path);
 				const absolutePath = resolveToCwd(path, cwd);
 				const parsedEdits = edits as HashlineEditOperation[];
 
@@ -139,7 +142,14 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 
 				const diffResult = generateDiffString(normalizedContent, result.content);
 				return {
-					content: [{ type: "text", text: `Successfully applied hashline edits to ${path}.` }],
+					content: [
+						{
+							type: "text",
+							text: lspNote
+								? `Successfully applied hashline edits to ${path}.\n\n[LSP] ${lspNote}`
+								: `Successfully applied hashline edits to ${path}.`,
+						},
+					],
 					details: {
 						diff: diffResult.diff,
 						firstChangedLine: result.firstChangedLine ?? diffResult.firstChangedLine,
@@ -148,6 +158,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 			}
 
 			const { path, oldText, newText } = params as ReplaceEditToolInput;
+			const lspNote = await options?.onPathAccess?.(path);
 			const absolutePath = resolveToCwd(path, cwd);
 
 			return new Promise<{
@@ -284,7 +295,9 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 							content: [
 								{
 									type: "text",
-									text: `Successfully replaced text in ${path}.`,
+									text: lspNote
+										? `Successfully replaced text in ${path}.\n\n[LSP] ${lspNote}`
+										: `Successfully replaced text in ${path}.`,
 								},
 							],
 							details: { diff: diffResult.diff, firstChangedLine: diffResult.firstChangedLine },

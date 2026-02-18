@@ -74,7 +74,7 @@ pi
 /login  # Then select provider
 ```
 
-Then just talk to pi. By default, pi gives the model four tools: `read`, `write`, `edit`, and `bash`. The model uses these to fulfill your requests. Add capabilities via [skills](#skills), [prompt templates](#prompt-templates), [extensions](#extensions), or [pi packages](#pi-packages).
+Then just talk to pi. By default, pi gives the model five tools: `read`, `write`, `edit`, `bash`, and `lsp`. The model uses these to fulfill your requests. Add capabilities via [skills](#skills), [prompt templates](#prompt-templates), [extensions](#extensions), or [pi packages](#pi-packages).
 
 **Platform notes:** [Windows](docs/windows.md) | [Termux (Android)](docs/termux.md) | [Terminal setup](docs/terminal-setup.md) | [Shell aliases](docs/shell-aliases.md)
 
@@ -246,6 +246,12 @@ Use `/settings` to modify common options, or edit JSON files directly:
 | `.pi/settings.json` | Project (overrides global) |
 
 See [docs/settings.md](docs/settings.md) for all options.
+
+For LSP lazy enable/install:
+- New repos start with no languages enabled (`lsp.languages` is empty by default).
+- On first `read`/`edit`/`write` encounter of a supported language, pi can auto-enable and auto-install its server (controlled by `lsp.autoEnableOnEncounter` and `lsp.autoInstallOnEncounter`).
+- If auto-install fails or is unsupported, tool output includes remediation steps.
+- The built-in `lsp` tool supports: `hover`, `definition`, `references`, `symbols` (document/workspace), `diagnostics`, `rename`, and `format`.
 
 ---
 
@@ -477,10 +483,10 @@ pi config                   # Enable/disable package resources
 
 | Option | Description |
 |--------|-------------|
-| `--tools <list>` | Enable specific built-in tools (default: `read,bash,edit,write`) |
+| `--tools <list>` | Enable specific built-in tools (default: `read,bash,edit,write,lsp`) |
 | `--no-tools` | Disable all built-in tools (extension tools still work) |
 
-Available built-in tools: `read`, `bash`, `edit`, `write`, `grep`, `find`, `ls`
+Available built-in tools: `read`, `bash`, `edit`, `write`, `lsp`, `grep`, `find`, `ls`
 
 ### Resource Options
 

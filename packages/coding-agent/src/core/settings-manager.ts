@@ -46,6 +46,13 @@ export interface EditSettings {
 	mode?: "replace" | "hashline" | "patch";
 }
 
+export interface LspSettings {
+	enabled?: boolean; // default: true
+	autoEnableOnEncounter?: boolean; // default: true
+	autoInstallOnEncounter?: boolean; // default: true
+	languages?: Record<string, boolean>; // default: {}
+}
+
 export type TransportSetting = Transport;
 
 /**
@@ -97,6 +104,7 @@ export interface Settings {
 	markdown?: MarkdownSettings;
 	edit?: EditSettings;
 	readHashLines?: boolean; // default: false - include LINE:HASH prefixes in read output
+	lsp?: LspSettings;
 }
 
 /** Deep merge settings: project/overrides take precedence, nested objects merge recursively */
@@ -899,5 +907,61 @@ export class SettingsManager {
 
 	getReadHashLines(): boolean {
 		return this.settings.readHashLines ?? false;
+	}
+
+	getLspEnabled(): boolean {
+		return this.settings.lsp?.enabled ?? true;
+	}
+
+	setLspEnabled(enabled: boolean): void {
+		if (!this.globalSettings.lsp) {
+			this.globalSettings.lsp = {};
+		}
+		this.globalSettings.lsp.enabled = enabled;
+		this.markModified("lsp", "enabled");
+		this.save();
+	}
+
+	getLspAutoEnableOnEncounter(): boolean {
+		return this.settings.lsp?.autoEnableOnEncounter ?? true;
+	}
+
+	setLspAutoEnableOnEncounter(enabled: boolean): void {
+		if (!this.globalSettings.lsp) {
+			this.globalSettings.lsp = {};
+		}
+		this.globalSettings.lsp.autoEnableOnEncounter = enabled;
+		this.markModified("lsp", "autoEnableOnEncounter");
+		this.save();
+	}
+
+	getLspAutoInstallOnEncounter(): boolean {
+		return this.settings.lsp?.autoInstallOnEncounter ?? true;
+	}
+
+	setLspAutoInstallOnEncounter(enabled: boolean): void {
+		if (!this.globalSettings.lsp) {
+			this.globalSettings.lsp = {};
+		}
+		this.globalSettings.lsp.autoInstallOnEncounter = enabled;
+		this.markModified("lsp", "autoInstallOnEncounter");
+		this.save();
+	}
+
+	getLspLanguageEnabled(languageId: string): boolean {
+		return this.settings.lsp?.languages?.[languageId] === true;
+	}
+
+	setProjectLspLanguageEnabled(languageId: string, enabled: boolean): void {
+		const projectSettings = structuredClone(this.projectSettings);
+		if (!projectSettings.lsp) {
+			projectSettings.lsp = {};
+		}
+		if (!projectSettings.lsp.languages) {
+			projectSettings.lsp.languages = {};
+		}
+		projectSettings.lsp.languages[languageId] = enabled;
+		this.markProjectModified("lsp", "languages");
+		this.saveProjectSettings(projectSettings);
 	}
 }

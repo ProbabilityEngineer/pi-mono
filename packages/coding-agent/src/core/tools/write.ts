@@ -30,6 +30,8 @@ const defaultWriteOperations: WriteOperations = {
 export interface WriteToolOptions {
 	/** Custom operations for file writing. Default: local filesystem */
 	operations?: WriteOperations;
+	/** Optional callback invoked when this tool accesses a file path. */
+	onPathAccess?: (path: string) => Promise<string | undefined> | string | undefined;
 }
 
 export function createWriteTool(cwd: string, options?: WriteToolOptions): AgentTool<typeof writeSchema> {
@@ -46,6 +48,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): AgentT
 			{ path, content }: { path: string; content: string },
 			signal?: AbortSignal,
 		) => {
+			const lspNote = await options?.onPathAccess?.(path);
 			const absolutePath = resolveToCwd(path, cwd);
 			const dir = dirname(absolutePath);
 
@@ -94,7 +97,14 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): AgentT
 							}
 
 							resolve({
-								content: [{ type: "text", text: `Successfully wrote ${content.length} bytes to ${path}` }],
+								content: [
+									{
+										type: "text",
+										text: lspNote
+											? `Successfully wrote ${content.length} bytes to ${path}\n\n[LSP] ${lspNote}`
+											: `Successfully wrote ${content.length} bytes to ${path}`,
+									},
+								],
 								details: undefined,
 							});
 						} catch (error: any) {

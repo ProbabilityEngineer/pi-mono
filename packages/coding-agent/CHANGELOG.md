@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added LSP lazy language encounter pipeline with language detection, planner, installer abstraction, and per-session retry suppression for failed installs.
+- Added project-scoped LSP language state in settings (`lsp.languages`) with safe defaults and persistence helpers.
+- Added LSP read-only API operations (`hover`, `definition`, `references`, `document symbols`, `workspace symbols`) with backported JSON-RPC client transport and lspmux integration.
+- Added LSP diagnostics/rename/format pathways with workspace edit application and diagnostic/workspace-edit rendering utilities.
+- Added a cross-platform LSP command probe contract abstraction (timeouts, expected exit behavior, injectable runners) for deterministic command availability validation.
+
+### Changed
+
+- `read`, `edit`, and `write` tools now support path encounter callbacks and emit LSP setup notices/remediation in tool output when encounter automation runs.
+- Wired the built-in `lsp` tool into session/runtime tool registration and gated activation/registration by `lsp.enabled`.
+
+### Fixed
+
+- Hardened Windows LSP command availability checks to use `PATH`/`PATHEXT` resolution plus spawn-based probe validation instead of path-existence checks only.
+- Integrated probe-backed command availability gating into LSP planner/installer readiness decisions so non-runnable server binaries trigger install/failure paths.
+- Expanded Windows LSP probe coverage (PATHEXT normalization, wrapper exit contracts, timeout/failure paths) and documented command-resolution remediation guidance.
+
 ## [0.53.0] - 2026-02-17
 
 ### Breaking Changes

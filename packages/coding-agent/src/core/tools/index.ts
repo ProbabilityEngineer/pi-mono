@@ -48,6 +48,7 @@ export {
 	type LsToolOptions,
 	lsTool,
 } from "./ls.js";
+export { createLspTool, type LspToolDetails, type LspToolInput, lspTool } from "./lsp.js";
 export {
 	createReadTool,
 	type ReadOperations,
@@ -80,14 +81,15 @@ import { createEditTool, type EditToolOptions, editTool } from "./edit.js";
 import { createFindTool, findTool } from "./find.js";
 import { createGrepTool, type GrepToolOptions, grepTool } from "./grep.js";
 import { createLsTool, lsTool } from "./ls.js";
+import { createLspTool, lspTool } from "./lsp.js";
 import { createReadTool, type ReadToolOptions, readTool } from "./read.js";
-import { createWriteTool, writeTool } from "./write.js";
+import { createWriteTool, type WriteToolOptions, writeTool } from "./write.js";
 
 /** Tool type (AgentTool from pi-ai) */
 export type Tool = AgentTool<any>;
 
 // Default tools for full access mode (using process.cwd())
-export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool];
+export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool, lspTool];
 
 // Read-only tools for exploration without modification (using process.cwd())
 export const readOnlyTools: Tool[] = [readTool, grepTool, findTool, lsTool];
@@ -98,6 +100,7 @@ export const allTools = {
 	bash: bashTool,
 	edit: editTool,
 	write: writeTool,
+	lsp: lspTool,
 	grep: grepTool,
 	find: findTool,
 	ls: lsTool,
@@ -114,6 +117,8 @@ export interface ToolsOptions {
 	edit?: EditToolOptions;
 	/** Options for the grep tool */
 	grep?: GrepToolOptions;
+	/** Options for the write tool */
+	write?: WriteToolOptions;
 }
 
 /**
@@ -124,7 +129,8 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
 		createReadTool(cwd, options?.read),
 		createBashTool(cwd, options?.bash),
 		createEditTool(cwd, options?.edit),
-		createWriteTool(cwd),
+		createWriteTool(cwd, options?.write),
+		createLspTool(cwd),
 	];
 }
 
@@ -148,7 +154,8 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 		read: createReadTool(cwd, options?.read),
 		bash: createBashTool(cwd, options?.bash),
 		edit: createEditTool(cwd, options?.edit),
-		write: createWriteTool(cwd),
+		write: createWriteTool(cwd, options?.write),
+		lsp: createLspTool(cwd),
 		grep: createGrepTool(cwd, options?.grep),
 		find: createFindTool(cwd),
 		ls: createLsTool(cwd),
