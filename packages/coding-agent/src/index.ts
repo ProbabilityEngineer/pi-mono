@@ -140,6 +140,16 @@ export {
 } from "./core/extensions/index.js";
 // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
 export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.js";
+export {
+	HOOK_EVENT_NAMES,
+	type HookConfigSource,
+	type HookDefinition,
+	type HookEventName,
+	type HookMatcher,
+	type HookResolutionInput,
+	type HooksConfigMap,
+	parseHooksConfig,
+} from "./core/hooks/index.js";
 export { convertToLlm } from "./core/messages.js";
 export { ModelRegistry } from "./core/model-registry.js";
 export type {
