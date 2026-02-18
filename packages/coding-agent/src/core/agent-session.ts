@@ -1969,9 +1969,12 @@ export class AgentSession {
 		const autoResizeImages = this.settingsManager.getImageAutoResize();
 		const shellCommandPrefix = this.settingsManager.getShellCommandPrefix();
 		const editMode = this.settingsManager.getEditMode();
+		const lspEnabled = this.settingsManager.getLspEnabled();
 		const defaultActiveToolNames = this._baseToolsOverride
 			? Object.keys(this._baseToolsOverride)
-			: ["read", "bash", "edit", "write"];
+			: lspEnabled
+				? ["read", "bash", "edit", "write", "lsp"]
+				: ["read", "bash", "edit", "write"];
 		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		const editToolActive = baseActiveToolNames.includes("edit");
 		const readHashLines = editToolActive && (this.settingsManager.getReadHashLines() || editMode === "hashline");
@@ -1993,6 +1996,9 @@ export class AgentSession {
 						onPathAccess: async (path) => await this._handleLanguageEncounter(path),
 					},
 				});
+		if (!lspEnabled) {
+			delete (baseTools as Partial<Record<string, AgentTool>>).lsp;
+		}
 
 		this._baseToolRegistry = new Map(Object.entries(baseTools).map(([name, tool]) => [name, tool as AgentTool]));
 

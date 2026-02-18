@@ -11,6 +11,7 @@
 ### Changed
 
 - `read`, `edit`, and `write` tools now support path encounter callbacks and emit LSP setup notices/remediation in tool output when encounter automation runs.
+- Wired the built-in `lsp` tool into session/runtime tool registration and gated activation/registration by `lsp.enabled`.
 
 ## [0.53.0] - 2026-02-17
 
