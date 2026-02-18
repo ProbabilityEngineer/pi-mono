@@ -82,6 +82,8 @@ export interface LspClient {
 	isReading: boolean;
 	lastActivity: number;
 	openFiles: Map<string, OpenFileState>;
+	diagnostics: Map<string, Diagnostic[]>;
+	diagnosticsVersion: number;
 	serverCapabilities?: Record<string, unknown>;
 }
 
@@ -178,6 +180,47 @@ export interface SymbolInformation {
 	containerName?: string;
 }
 
+export interface Diagnostic {
+	range: Range;
+	severity?: 1 | 2 | 3 | 4;
+	code?: string | number;
+	source?: string;
+	message: string;
+}
+
+export interface TextEdit {
+	range: Range;
+	newText: string;
+}
+
+export interface TextDocumentEdit {
+	textDocument: { uri: string; version?: number | null };
+	edits: TextEdit[];
+}
+
+export interface CreateFileOperation {
+	kind: "create";
+	uri: string;
+}
+
+export interface RenameFileOperation {
+	kind: "rename";
+	oldUri: string;
+	newUri: string;
+}
+
+export interface DeleteFileOperation {
+	kind: "delete";
+	uri: string;
+}
+
+export type DocumentChange = TextDocumentEdit | CreateFileOperation | RenameFileOperation | DeleteFileOperation;
+
+export interface WorkspaceEdit {
+	changes?: Record<string, TextEdit[]>;
+	documentChanges?: DocumentChange[];
+}
+
 export interface LspHoverResult {
 	server: string;
 	contents: string;
@@ -202,4 +245,23 @@ export interface LspDocumentSymbolsResult {
 export interface LspWorkspaceSymbolsResult {
 	server: string;
 	symbols: SymbolInformation[];
+}
+
+export interface LspDiagnosticsResult {
+	server: string;
+	diagnostics: Diagnostic[];
+}
+
+export interface LspRenameResult {
+	server: string;
+	edit?: WorkspaceEdit;
+	applied: boolean;
+	changes: string[];
+}
+
+export interface LspFormatResult {
+	server: string;
+	changed: boolean;
+	applied: boolean;
+	editCount: number;
 }

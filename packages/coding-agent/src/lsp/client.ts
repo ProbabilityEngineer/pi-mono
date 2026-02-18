@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { detectLanguageIdFromPath } from "./detection.js";
 import { getLspmuxCommand, isLspmuxSupported } from "./lspmux.js";
 import type {
+	Diagnostic,
 	LspClient,
 	LspClientTransport,
 	LspJsonRpcNotification,
@@ -205,6 +206,13 @@ function routeMessage(
 
 	if ("id" in message && "method" in message && typeof message.id === "number") {
 		void handleServerRequest(client, message).catch(() => {});
+		return;
+	}
+
+	if ("method" in message && message.method === "textDocument/publishDiagnostics" && message.params) {
+		const params = message.params as { uri: string; diagnostics: Diagnostic[] };
+		client.diagnostics.set(params.uri, params.diagnostics);
+		client.diagnosticsVersion += 1;
 	}
 }
 
@@ -278,6 +286,8 @@ export async function getOrCreateClient(config: ServerConfig, cwd: string, initT
 			isReading: false,
 			lastActivity: Date.now(),
 			openFiles: new Map<string, OpenFileState>(),
+			diagnostics: new Map(),
+			diagnosticsVersion: 0,
 		};
 
 		clients.set(key, client);

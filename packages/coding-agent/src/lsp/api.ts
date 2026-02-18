@@ -1,21 +1,29 @@
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { ensureFileOpen, getOrCreateClient, sendRequest } from "./client.js";
+import { ensureFileOpen, getOrCreateClient, notifySaved, sendRequest, syncContent } from "./client.js";
 import { getServersForLanguage, loadLspServers, resolveCommand } from "./config.js";
 import { detectLanguageIdFromPath } from "./detection.js";
+import { applyTextEditsToString, applyWorkspaceEdit } from "./edits.js";
 import type {
+	Diagnostic,
 	DocumentSymbol,
 	Hover,
 	Location,
 	LocationLink,
 	LspDefinitionResult,
+	LspDiagnosticsResult,
 	LspDocumentSymbolsResult,
+	LspFormatResult,
 	LspHoverResult,
 	LspReferencesResult,
+	LspRenameResult,
 	LspWorkspaceSymbolsResult,
 	Position,
 	ServerConfig,
 	SymbolInformation,
+	TextEdit,
+	WorkspaceEdit,
 } from "./types.js";
 
 export interface LspOperationInput {
@@ -33,6 +41,24 @@ export interface LspReferencesInput extends LspOperationInput {
 export interface LspWorkspaceSymbolsInput {
 	cwd: string;
 	query: string;
+	signal?: AbortSignal;
+}
+
+export interface LspRenameInput extends LspOperationInput {
+	newName: string;
+	apply?: boolean;
+}
+
+export interface LspFormatInput {
+	cwd: string;
+	filePath: string;
+	apply?: boolean;
+	signal?: AbortSignal;
+}
+
+export interface LspDiagnosticsInput {
+	cwd: string;
+	filePath: string;
 	signal?: AbortSignal;
 }
 
@@ -210,5 +236,124 @@ export async function lspWorkspaceSymbols(input: LspWorkspaceSymbolsInput): Prom
 	return {
 		server: serverName,
 		symbols: result ?? [],
+	};
+}
+
+async function waitForDiagnostics(
+	client: Awaited<ReturnType<typeof getOrCreateClient>>,
+	uri: string,
+	minVersion: number,
+	timeoutMs: number = 3_000,
+): Promise<Diagnostic[]> {
+	const start = Date.now();
+	while (Date.now() - start < timeoutMs) {
+		const diagnostics = client.diagnostics.get(uri);
+		if (diagnostics && client.diagnosticsVersion > minVersion) {
+			return diagnostics;
+		}
+		await new Promise((resolveTimeout) => setTimeout(resolveTimeout, 100));
+	}
+	return client.diagnostics.get(uri) ?? [];
+}
+
+export async function lspDiagnostics(input: LspDiagnosticsInput): Promise<LspDiagnosticsResult> {
+	const { absolutePath, client, serverName } = await resolveClientForFile(input.cwd, input.filePath);
+	const uri = fileToUri(absolutePath);
+	const before = client.diagnosticsVersion;
+	await notifySaved(client, absolutePath);
+	const diagnostics = await waitForDiagnostics(client, uri, before);
+	return {
+		server: serverName,
+		diagnostics,
+	};
+}
+
+export async function lspRename(input: LspRenameInput): Promise<LspRenameResult> {
+	const { absolutePath, client, serverName } = await resolveClientForFile(input.cwd, input.filePath);
+	const result = (await sendRequest(
+		client,
+		"textDocument/rename",
+		{
+			textDocument: { uri: fileToUri(absolutePath) },
+			position: toPosition(input.line, input.column),
+			newName: input.newName,
+		},
+		input.signal,
+	)) as WorkspaceEdit | null;
+
+	if (!result) {
+		return {
+			server: serverName,
+			applied: false,
+			changes: [],
+		};
+	}
+
+	if (input.apply === false) {
+		return {
+			server: serverName,
+			edit: result,
+			applied: false,
+			changes: [],
+		};
+	}
+
+	const changes = await applyWorkspaceEdit(result);
+	return {
+		server: serverName,
+		edit: result,
+		applied: true,
+		changes,
+	};
+}
+
+export async function lspFormatDocument(input: LspFormatInput): Promise<LspFormatResult> {
+	const { absolutePath, client, serverName } = await resolveClientForFile(input.cwd, input.filePath);
+	const edits = (await sendRequest(
+		client,
+		"textDocument/formatting",
+		{
+			textDocument: { uri: fileToUri(absolutePath) },
+			options: {
+				tabSize: 2,
+				insertSpaces: true,
+				trimTrailingWhitespace: true,
+				insertFinalNewline: true,
+				trimFinalNewlines: true,
+			},
+		},
+		input.signal,
+	)) as TextEdit[] | null;
+
+	const editCount = edits?.length ?? 0;
+	if (!edits || edits.length === 0) {
+		return {
+			server: serverName,
+			changed: false,
+			applied: false,
+			editCount: 0,
+		};
+	}
+
+	if (input.apply === false) {
+		return {
+			server: serverName,
+			changed: true,
+			applied: false,
+			editCount,
+		};
+	}
+
+	const content = await readFile(absolutePath, "utf8");
+	const next = applyTextEditsToString(content, edits);
+	await writeFile(absolutePath, next, "utf8");
+	await syncContent(client, absolutePath, next);
+	await notifySaved(client, absolutePath);
+
+	return {
+		server: serverName,
+		changed: next !== content,
+		applied: true,
+		editCount,
 	};
 }
