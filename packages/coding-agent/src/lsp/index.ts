@@ -61,7 +61,11 @@ export {
 	isLspmuxSupported,
 	wrapWithLspmux,
 } from "./lspmux.js";
-export { type PlanLanguageEncounterInput, planLanguageEncounter } from "./planner.js";
+export {
+	type PlanLanguageEncounterInput,
+	type PlanLanguageEncounterOptions,
+	planLanguageEncounter,
+} from "./planner.js";
 export { runCommandProbe } from "./probe.js";
 export { formatDiagnostics, formatWorkspaceEdit } from "./render.js";
 export type {
