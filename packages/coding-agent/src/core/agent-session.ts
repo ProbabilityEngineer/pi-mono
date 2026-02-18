@@ -1966,11 +1966,17 @@ export class AgentSession {
 		const autoResizeImages = this.settingsManager.getImageAutoResize();
 		const shellCommandPrefix = this.settingsManager.getShellCommandPrefix();
 		const editMode = this.settingsManager.getEditMode();
-		const readHashLines = this.settingsManager.getReadHashLines() || editMode === "hashline";
+		const defaultActiveToolNames = this._baseToolsOverride
+			? Object.keys(this._baseToolsOverride)
+			: ["read", "bash", "edit", "write"];
+		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
+		const editToolActive = baseActiveToolNames.includes("edit");
+		const readHashLines = editToolActive && (this.settingsManager.getReadHashLines() || editMode === "hashline");
 		const baseTools = this._baseToolsOverride
 			? this._baseToolsOverride
 			: createAllTools(this._cwd, {
 					read: { autoResizeImages, hashLines: readHashLines },
+					grep: { hashLines: readHashLines },
 					bash: { commandPrefix: shellCommandPrefix },
 					edit: { editMode },
 				});
@@ -2018,10 +2024,6 @@ export class AgentSession {
 			toolRegistry.set(tool.name, tool);
 		}
 
-		const defaultActiveToolNames = this._baseToolsOverride
-			? Object.keys(this._baseToolsOverride)
-			: ["read", "bash", "edit", "write"];
-		const baseActiveToolNames = options.activeToolNames ?? defaultActiveToolNames;
 		const activeToolNameSet = new Set<string>(baseActiveToolNames);
 		if (options.includeAllExtensionTools) {
 			for (const tool of wrappedExtensionTools as AgentTool[]) {
