@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { globSync } from "glob";
+import { parse as parseYaml } from "yaml";
 import DEFAULTS from "./defaults.json";
 import { type CommandProbeResult, type CommandProbeRunner, runCommandProbe } from "./probe.js";
 import type { LspConfigFile, LspServerDefinition, ResolvedLspServer } from "./types.js";
@@ -42,13 +43,23 @@ export interface CommandAvailabilityOptions {
 }
 
 function loadOverrides(cwd: string): Record<string, Partial<LspServerDefinition>> {
-	const candidates = [join(cwd, "lsp.json"), join(cwd, ".pi", "lsp.json")];
+	const candidates = [
+		join(cwd, "lsp.json"),
+		join(cwd, "lsp.yaml"),
+		join(cwd, "lsp.yml"),
+		join(cwd, ".pi", "lsp.json"),
+		join(cwd, ".pi", "lsp.yaml"),
+		join(cwd, ".pi", "lsp.yml"),
+		join(cwd, ".config", "pi", "lsp.json"),
+		join(cwd, ".config", "pi", "lsp.yaml"),
+		join(cwd, ".config", "pi", "lsp.yml"),
+	];
 	for (const path of candidates) {
 		if (!existsSync(path)) {
 			continue;
 		}
 		try {
-			const parsed = JSON.parse(readFileSync(path, "utf-8")) as LspConfigFile;
+			const parsed = parseLspConfig(path, readFileSync(path, "utf-8"));
 			if (parsed.servers) {
 				return parsed.servers;
 			}
@@ -57,6 +68,13 @@ function loadOverrides(cwd: string): Record<string, Partial<LspServerDefinition>
 		}
 	}
 	return {};
+}
+
+function parseLspConfig(path: string, raw: string): LspConfigFile {
+	if (path.endsWith(".yaml") || path.endsWith(".yml")) {
+		return parseYaml(raw) as LspConfigFile;
+	}
+	return JSON.parse(raw) as LspConfigFile;
 }
 
 function hasRootMarkers(cwd: string, markers: string[]): boolean {
