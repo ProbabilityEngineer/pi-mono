@@ -1,10 +1,8 @@
 import { type ChildProcessWithoutNullStreams, type SpawnOptionsWithoutStdio, spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { detectLanguageIdFromPath } from "./detection.js";
 import { getLspmuxCommand, isLspmuxSupported } from "./lspmux.js";
 import type {
-	Diagnostic,
 	LspClient,
 	LspClientTransport,
 	LspJsonRpcNotification,
@@ -61,9 +59,8 @@ export function setIdleTimeout(timeoutMs: number | null | undefined): void {
 	stopIdleChecker();
 }
 
-function createClientKey(command: string, args: string[] | undefined, cwd: string): string {
-	const argSuffix = args && args.length > 0 ? `:${args.join(" ")}` : "";
-	return `${command}${argSuffix}:${cwd}`;
+function createClientKey(command: string, cwd: string): string {
+	return `${command}:${cwd}`;
 }
 
 function spawnLspServer(
@@ -206,13 +203,6 @@ function routeMessage(
 
 	if ("id" in message && "method" in message && typeof message.id === "number") {
 		void handleServerRequest(client, message).catch(() => {});
-		return;
-	}
-
-	if ("method" in message && message.method === "textDocument/publishDiagnostics" && message.params) {
-		const params = message.params as { uri: string; diagnostics: Diagnostic[] };
-		client.diagnostics.set(params.uri, params.diagnostics);
-		client.diagnosticsVersion += 1;
 	}
 }
 
@@ -253,7 +243,7 @@ function fileToUri(filePath: string): string {
 
 export async function getOrCreateClient(config: ServerConfig, cwd: string, initTimeoutMs?: number): Promise<LspClient> {
 	const commandForKey = config.resolvedCommand ?? config.command;
-	const key = createClientKey(commandForKey, config.args, cwd);
+	const key = createClientKey(commandForKey, cwd);
 	const existing = clients.get(key);
 	if (existing) {
 		existing.lastActivity = Date.now();
@@ -286,8 +276,6 @@ export async function getOrCreateClient(config: ServerConfig, cwd: string, initT
 			isReading: false,
 			lastActivity: Date.now(),
 			openFiles: new Map<string, OpenFileState>(),
-			diagnostics: new Map(),
-			diagnosticsVersion: 0,
 		};
 
 		clients.set(key, client);
@@ -426,21 +414,12 @@ export async function ensureFileOpen(client: LspClient, filePath: string, signal
 
 	const openPromise = (async () => {
 		const languageId = detectLanguageIdFromPath(filePath) ?? "plaintext";
-		let content = "";
-		try {
-			content = await readFile(filePath, "utf8");
-		} catch (error) {
-			const nodeError = error as NodeJS.ErrnoException;
-			if (nodeError.code !== "ENOENT") {
-				throw error;
-			}
-		}
 		await sendNotification(client, "textDocument/didOpen", {
 			textDocument: {
 				uri,
 				languageId,
 				version: 1,
-				text: content,
+				text: "",
 			},
 		});
 		client.openFiles.set(uri, { languageId, version: 1 });
