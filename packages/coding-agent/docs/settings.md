@@ -136,6 +136,20 @@ When a provider requests a retry delay longer than `maxDelayMs` (e.g., Google's 
 |---------|------|---------|-------------|
 | `markdown.codeBlockIndent` | string | `"  "` | Indentation for code blocks |
 
+### Editing
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `edit.mode` | string | `"hashline"` | Edit strategy: `"hashline"` (anchor-based) or `"replace"` |
+
+```json
+{
+  "edit": {
+    "mode": "hashline"
+  }
+}
+```
+
 ### LSP
 
 | Setting | Type | Default | Description |
@@ -157,6 +171,8 @@ When a provider requests a retry delay longer than `maxDelayMs` (e.g., Google's 
   }
 }
 ```
+
+Hashline and LSP support were backported from [Can Bölük's Oh-My-Pi](https://github.com/can1357/oh-my-pi). Both can be enabled or disabled in `/settings`.
 
 ### Resources
 
