@@ -1,6 +1,7 @@
 {
 	"typescript-language-server": {
 		"command": "typescript-language-server",
+		"args": ["--stdio"],
 		"languages": ["typescript", "typescriptreact", "javascript", "javascriptreact"],
 		"installer": {
 			"kind": "npm",
@@ -9,6 +10,7 @@
 	},
 	"vscode-json-language-server": {
 		"command": "vscode-json-language-server",
+		"args": ["--stdio"],
 		"languages": ["json", "jsonc"],
 		"installer": {
 			"kind": "npm",
@@ -17,6 +19,7 @@
 	},
 	"vscode-css-language-server": {
 		"command": "vscode-css-language-server",
+		"args": ["--stdio"],
 		"languages": ["css", "scss", "sass", "less"],
 		"installer": {
 			"kind": "npm",
@@ -25,6 +28,7 @@
 	},
 	"vscode-html-language-server": {
 		"command": "vscode-html-language-server",
+		"args": ["--stdio"],
 		"languages": ["html"],
 		"installer": {
 			"kind": "npm",
@@ -33,6 +37,7 @@
 	},
 	"pyright": {
 		"command": "pyright-langserver",
+		"args": ["--stdio"],
 		"languages": ["python"],
 		"installer": {
 			"kind": "pip",
