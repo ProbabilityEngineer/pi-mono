@@ -1,52 +1,9 @@
 {
-	"typescript-language-server": {
-		"command": "typescript-language-server",
-		"args": ["--stdio"],
-		"languages": ["typescript", "typescriptreact", "javascript", "javascriptreact"],
-		"installer": {
-			"kind": "npm",
-			"package": "typescript-language-server"
-		}
-	},
-	"vscode-json-language-server": {
-		"command": "vscode-json-language-server",
-		"args": ["--stdio"],
-		"languages": ["json", "jsonc"],
-		"installer": {
-			"kind": "npm",
-			"package": "vscode-langservers-extracted"
-		}
-	},
-	"vscode-css-language-server": {
-		"command": "vscode-css-language-server",
-		"args": ["--stdio"],
-		"languages": ["css", "scss", "sass", "less"],
-		"installer": {
-			"kind": "npm",
-			"package": "vscode-langservers-extracted"
-		}
-	},
-	"vscode-html-language-server": {
-		"command": "vscode-html-language-server",
-		"args": ["--stdio"],
-		"languages": ["html"],
-		"installer": {
-			"kind": "npm",
-			"package": "vscode-langservers-extracted"
-		}
-	},
-	"pyright": {
-		"command": "pyright-langserver",
-		"args": ["--stdio"],
-		"languages": ["python"],
-		"installer": {
-			"kind": "pip",
-			"package": "pyright"
-		}
-	},
 	"rust-analyzer": {
 		"command": "rust-analyzer",
-		"languages": ["rust"],
+		"languages": [
+			"rust"
+		],
 		"installer": {
 			"kind": "unsupported",
 			"remediation": "Install rust-analyzer via rustup (`rustup component add rust-analyzer`) or your package manager."
@@ -54,10 +11,473 @@
 	},
 	"gopls": {
 		"command": "gopls",
-		"languages": ["go"],
+		"args": [
+			"serve"
+		],
+		"languages": [
+			"go"
+		],
 		"installer": {
 			"kind": "unsupported",
 			"remediation": "Install gopls with `go install golang.org/x/tools/gopls@latest`."
 		}
+	},
+	"typescript-language-server": {
+		"command": "typescript-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"typescript",
+			"typescriptreact",
+			"javascript",
+			"javascriptreact"
+		],
+		"installer": {
+			"kind": "npm",
+			"package": "typescript-language-server"
+		}
+	},
+	"biome": {
+		"command": "biome",
+		"args": [
+			"lsp-proxy"
+		],
+		"languages": [
+			"typescript",
+			"typescriptreact",
+			"javascript",
+			"javascriptreact",
+			"json",
+			"jsonc"
+		]
+	},
+	"eslint": {
+		"command": "vscode-eslint-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"typescript",
+			"typescriptreact",
+			"javascript",
+			"javascriptreact",
+			"vue",
+			"svelte"
+		]
+	},
+	"denols": {
+		"command": "deno",
+		"args": [
+			"lsp"
+		],
+		"languages": [
+			"typescript",
+			"typescriptreact",
+			"javascript",
+			"javascriptreact"
+		]
+	},
+	"vscode-html-language-server": {
+		"command": "vscode-html-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"html"
+		],
+		"installer": {
+			"kind": "npm",
+			"package": "vscode-langservers-extracted"
+		}
+	},
+	"vscode-css-language-server": {
+		"command": "vscode-css-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"css",
+			"scss",
+			"sass",
+			"less"
+		],
+		"installer": {
+			"kind": "npm",
+			"package": "vscode-langservers-extracted"
+		}
+	},
+	"vscode-json-language-server": {
+		"command": "vscode-json-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"json",
+			"jsonc"
+		],
+		"installer": {
+			"kind": "npm",
+			"package": "vscode-langservers-extracted"
+		}
+	},
+	"tailwindcss": {
+		"command": "tailwindcss-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"html",
+			"css",
+			"scss",
+			"javascript",
+			"javascriptreact",
+			"typescript",
+			"typescriptreact",
+			"vue",
+			"svelte"
+		]
+	},
+	"svelte": {
+		"command": "svelteserver",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"svelte"
+		]
+	},
+	"vue-language-server": {
+		"command": "vue-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"vue"
+		]
+	},
+	"astro": {
+		"command": "astro-ls",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"astro"
+		]
+	},
+	"pyright": {
+		"command": "pyright-langserver",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"python"
+		],
+		"installer": {
+			"kind": "pip",
+			"package": "pyright"
+		}
+	},
+	"basedpyright": {
+		"command": "basedpyright-langserver",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"python"
+		]
+	},
+	"pylsp": {
+		"command": "pylsp",
+		"languages": [
+			"python"
+		]
+	},
+	"ruff": {
+		"command": "ruff",
+		"args": [
+			"server"
+		],
+		"languages": [
+			"python"
+		]
+	},
+	"jdtls": {
+		"command": "jdtls",
+		"languages": [
+			"java"
+		]
+	},
+	"kotlin-language-server": {
+		"command": "kotlin-language-server",
+		"languages": [
+			"kotlin"
+		]
+	},
+	"metals": {
+		"command": "metals",
+		"languages": [
+			"scala"
+		]
+	},
+	"hls": {
+		"command": "haskell-language-server-wrapper",
+		"args": [
+			"--lsp"
+		],
+		"languages": [
+			"haskell"
+		]
+	},
+	"ocamllsp": {
+		"command": "ocamllsp",
+		"languages": [
+			"ocaml"
+		]
+	},
+	"elixirls": {
+		"command": "elixir-ls",
+		"languages": [
+			"elixir"
+		]
+	},
+	"erlangls": {
+		"command": "erlang_ls",
+		"languages": [
+			"erlang"
+		]
+	},
+	"gleam": {
+		"command": "gleam",
+		"args": [
+			"lsp"
+		],
+		"languages": [
+			"gleam"
+		]
+	},
+	"solargraph": {
+		"command": "solargraph",
+		"args": [
+			"stdio"
+		],
+		"languages": [
+			"ruby"
+		]
+	},
+	"ruby-lsp": {
+		"command": "ruby-lsp",
+		"languages": [
+			"ruby"
+		]
+	},
+	"rubocop": {
+		"command": "rubocop",
+		"args": [
+			"--lsp"
+		],
+		"languages": [
+			"ruby"
+		]
+	},
+	"bashls": {
+		"command": "bash-language-server",
+		"args": [
+			"start"
+		],
+		"languages": [
+			"shell"
+		]
+	},
+	"lua-language-server": {
+		"command": "lua-language-server",
+		"languages": [
+			"lua"
+		]
+	},
+	"intelephense": {
+		"command": "intelephense",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"php"
+		]
+	},
+	"phpactor": {
+		"command": "phpactor",
+		"args": [
+			"language-server"
+		],
+		"languages": [
+			"php"
+		]
+	},
+	"omnisharp": {
+		"command": "omnisharp",
+		"args": [
+			"-z",
+			"--hostPID",
+			"$PID",
+			"--encoding",
+			"utf-8",
+			"--languageserver"
+		],
+		"languages": [
+			"csharp"
+		]
+	},
+	"yamlls": {
+		"command": "yaml-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"yaml"
+		]
+	},
+	"taplo": {
+		"command": "taplo",
+		"args": [
+			"lsp",
+			"stdio"
+		],
+		"languages": [
+			"toml"
+		]
+	},
+	"terraformls": {
+		"command": "terraform-ls",
+		"args": [
+			"serve"
+		],
+		"languages": [
+			"terraform"
+		]
+	},
+	"dockerls": {
+		"command": "docker-langserver",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"dockerfile"
+		]
+	},
+	"helm-ls": {
+		"command": "helm_ls",
+		"args": [
+			"serve"
+		],
+		"languages": [
+			"yaml",
+			"helm"
+		]
+	},
+	"nixd": {
+		"command": "nixd",
+		"languages": [
+			"nix"
+		]
+	},
+	"nil": {
+		"command": "nil",
+		"languages": [
+			"nix"
+		]
+	},
+	"ols": {
+		"command": "ols",
+		"languages": [
+			"odin"
+		]
+	},
+	"dartls": {
+		"command": "dart",
+		"args": [
+			"language-server",
+			"--protocol=lsp"
+		],
+		"languages": [
+			"dart"
+		]
+	},
+	"marksman": {
+		"command": "marksman",
+		"args": [
+			"server"
+		],
+		"languages": [
+			"markdown"
+		]
+	},
+	"texlab": {
+		"command": "texlab",
+		"languages": [
+			"tex"
+		]
+	},
+	"graphql": {
+		"command": "graphql-lsp",
+		"args": [
+			"server",
+			"-m",
+			"stream"
+		],
+		"languages": [
+			"graphql"
+		]
+	},
+	"prismals": {
+		"command": "prisma-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"prisma"
+		]
+	},
+	"vimls": {
+		"command": "vim-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"vim"
+		]
+	},
+	"emmet-language-server": {
+		"command": "emmet-language-server",
+		"args": [
+			"--stdio"
+		],
+		"languages": [
+			"html",
+			"css",
+			"scss",
+			"less",
+			"javascriptreact",
+			"typescriptreact",
+			"vue",
+			"svelte"
+		]
+	},
+	"sourcekit-lsp": {
+		"command": "sourcekit-lsp",
+		"languages": [
+			"swift"
+		]
+	},
+	"swiftlint": {
+		"command": "swiftlint",
+		"args": [
+			"lint",
+			"--quiet",
+			"--reporter",
+			"json"
+		],
+		"languages": [
+			"swift"
+		]
 	}
 }
