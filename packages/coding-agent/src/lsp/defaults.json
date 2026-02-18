@@ -51,6 +51,7 @@
 		"args": [
 			"lsp-proxy"
 		],
+		"isLinter": true,
 		"languages": [
 			"typescript",
 			"typescriptreact",
@@ -65,6 +66,7 @@
 		"args": [
 			"--stdio"
 		],
+		"isLinter": true,
 		"languages": [
 			"typescript",
 			"typescriptreact",
@@ -206,6 +208,7 @@
 		"args": [
 			"server"
 		],
+		"isLinter": true,
 		"languages": [
 			"python"
 		]
@@ -284,6 +287,7 @@
 		"args": [
 			"--lsp"
 		],
+		"isLinter": true,
 		"languages": [
 			"ruby"
 		]
@@ -484,6 +488,7 @@
 			"--reporter",
 			"json"
 		],
+		"isLinter": true,
 		"languages": [
 			"swift"
 		]
