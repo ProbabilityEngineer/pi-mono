@@ -11,6 +11,7 @@ export type HashlineEditOperation =
 	| { insert_after: { anchor: string; text: string } };
 
 const HASHLINE_REF_RE = /(\d+):([0-9a-fA-F]+)/;
+const HASHLINE_TEXT_PREFIX_RE = /^\d+:[0-9a-fA-F]{2,}\|/;
 const RECOVERY_WINDOW = 8;
 
 function normalizeHashInput(line: string): string {
@@ -50,6 +51,15 @@ export function parseLineRef(ref: string): HashlineRef {
 		throw new Error(`Invalid line reference "${ref}". Line number must be >= 1.`);
 	}
 	return { line, hash: match[2] };
+}
+
+function assertNoHashlinePrefixedContent(text: string): void {
+	const lines = text.split("\n");
+	for (const line of lines) {
+		if (HASHLINE_TEXT_PREFIX_RE.test(line)) {
+			throw new Error("Do not include hashline prefixes in replacement text.");
+		}
+	}
 }
 
 function getMatchingLinesByHash(hash: string, fileLines: string[]): number[] {
@@ -128,10 +138,12 @@ export function applyHashlineEdits(
 
 	const parsedEdits = edits.map((edit, index) => {
 		if ("set_line" in edit) {
+			assertNoHashlinePrefixedContent(edit.set_line.new_text);
 			const ref = resolveLineRef(parseLineRef(edit.set_line.anchor), originalLines);
 			return { kind: "set_line" as const, ref, newText: edit.set_line.new_text, index };
 		}
 		if ("replace_lines" in edit) {
+			assertNoHashlinePrefixedContent(edit.replace_lines.new_text);
 			const startRef = resolveLineRef(parseLineRef(edit.replace_lines.start_anchor), originalLines);
 			const endRef = resolveLineRef(parseLineRef(edit.replace_lines.end_anchor), originalLines);
 			if (startRef.line > endRef.line) {
@@ -143,6 +155,7 @@ export function applyHashlineEdits(
 		if (edit.insert_after.text.length === 0) {
 			throw new Error("insert_after.text must not be empty.");
 		}
+		assertNoHashlinePrefixedContent(edit.insert_after.text);
 		return { kind: "insert_after" as const, ref, text: edit.insert_after.text, index };
 	});
 
