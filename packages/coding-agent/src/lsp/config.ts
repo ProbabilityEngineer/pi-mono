@@ -14,6 +14,16 @@ const LOCAL_BIN_PATHS: Array<{ markers: string[]; binDir: string }> = [
 
 const DEFAULT_WINDOWS_PATH_EXTENSIONS = [".com", ".exe", ".bat", ".cmd"];
 const COMMAND_PROBE_TIMEOUT_MS = 1_500;
+const SERVER_PRIORITY: Record<string, number> = {
+	"typescript-language-server": 0,
+	"vscode-json-language-server": 0,
+	"vscode-css-language-server": 0,
+	"vscode-html-language-server": 0,
+	pyright: 0,
+	"rust-analyzer": 0,
+	gopls: 0,
+	"sourcekit-lsp": 0,
+};
 
 export interface ResolveCommandOnPathOptions {
 	platform?: NodeJS.Platform;
@@ -262,7 +272,14 @@ export function getServersForLanguage(languageId: string, cwd: string): Resolved
 	const servers = loadLspServers(cwd);
 	return Object.values(servers)
 		.filter((server) => server.languages.includes(languageId))
-		.sort((a, b) => a.name.localeCompare(b.name));
+		.sort((a, b) => {
+			const leftPriority = SERVER_PRIORITY[a.name] ?? 100;
+			const rightPriority = SERVER_PRIORITY[b.name] ?? 100;
+			if (leftPriority !== rightPriority) {
+				return leftPriority - rightPriority;
+			}
+			return a.name.localeCompare(b.name);
+		});
 }
 
 export type { CommandProbeResult, CommandProbeRunner };
