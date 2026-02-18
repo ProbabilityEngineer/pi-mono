@@ -6,6 +6,11 @@ const mockLspDefinition = vi.fn();
 const mockLspReferences = vi.fn();
 const mockLspDocumentSymbols = vi.fn();
 const mockLspWorkspaceSymbols = vi.fn();
+const mockLspDiagnostics = vi.fn();
+const mockLspRename = vi.fn();
+const mockLspFormatDocument = vi.fn();
+const mockFormatDiagnostics = vi.fn();
+const mockFormatWorkspaceEdit = vi.fn();
 
 vi.mock("../src/lsp/index.js", () => ({
 	lspHover: (...args: unknown[]) => mockLspHover(...args),
@@ -13,6 +18,11 @@ vi.mock("../src/lsp/index.js", () => ({
 	lspReferences: (...args: unknown[]) => mockLspReferences(...args),
 	lspDocumentSymbols: (...args: unknown[]) => mockLspDocumentSymbols(...args),
 	lspWorkspaceSymbols: (...args: unknown[]) => mockLspWorkspaceSymbols(...args),
+	lspDiagnostics: (...args: unknown[]) => mockLspDiagnostics(...args),
+	lspRename: (...args: unknown[]) => mockLspRename(...args),
+	lspFormatDocument: (...args: unknown[]) => mockLspFormatDocument(...args),
+	formatDiagnostics: (...args: unknown[]) => mockFormatDiagnostics(...args),
+	formatWorkspaceEdit: (...args: unknown[]) => mockFormatWorkspaceEdit(...args),
 }));
 
 function getTextContent(result: { content: Array<{ type: string; text?: string }> }): string {
@@ -105,5 +115,69 @@ describe("lsp tool", () => {
 		expect(result.content[0].type).toBe("text");
 		expect(getTextContent(result)).toContain("value");
 		expect(getTextContent(result)).toContain("src/index.ts:4:2");
+	});
+
+	it("renders diagnostics using formatter", async () => {
+		mockLspDiagnostics.mockResolvedValueOnce({
+			server: "tsserver",
+			diagnostics: [{ message: "warning message" }],
+		});
+		mockFormatDiagnostics.mockReturnValueOnce(["src/index.ts:1:1 [warning] warning message"]);
+
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-6", { action: "diagnostics", file: "src/index.ts" });
+		expect(getTextContent(result)).toContain("warning message");
+	});
+
+	it("supports rename preview and apply", async () => {
+		mockLspRename.mockResolvedValueOnce({
+			server: "tsserver",
+			applied: false,
+			edit: { changes: {} },
+			changes: [],
+		});
+		mockFormatWorkspaceEdit.mockReturnValueOnce(["src/index.ts: 1 edit(s)"]);
+
+		const tool = createLspTool("/workspace");
+		const preview = await tool.execute("call-7", {
+			action: "rename",
+			file: "src/index.ts",
+			line: 1,
+			column: 1,
+			new_name: "nextValue",
+			apply: false,
+		});
+		expect(getTextContent(preview)).toContain("Rename preview");
+
+		mockLspRename.mockResolvedValueOnce({
+			server: "tsserver",
+			applied: true,
+			edit: { changes: {} },
+			changes: ["Edited /workspace/src/index.ts"],
+		});
+		const applied = await tool.execute("call-8", {
+			action: "rename",
+			file: "src/index.ts",
+			line: 1,
+			column: 1,
+			new_name: "nextValue",
+		});
+		expect(getTextContent(applied)).toContain("Applied rename");
+	});
+
+	it("supports format operation", async () => {
+		mockLspFormatDocument.mockResolvedValueOnce({
+			server: "tsserver",
+			changed: true,
+			applied: true,
+			editCount: 2,
+		});
+
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-9", {
+			action: "format",
+			file: "src/index.ts",
+		});
+		expect(getTextContent(result)).toContain("Applied formatting");
 	});
 });
