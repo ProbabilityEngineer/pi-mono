@@ -1,4 +1,4 @@
-import { getServersForLanguage, isCommandAvailable } from "./config.js";
+import { type CommandAvailabilityOptions, getServersForLanguage, isCommandAvailable } from "./config.js";
 import type { LspPlannerResult } from "./types.js";
 
 export interface PlanLanguageEncounterInput {
@@ -9,7 +9,15 @@ export interface PlanLanguageEncounterInput {
 	autoInstallOnEncounter: boolean;
 }
 
-export function planLanguageEncounter(input: PlanLanguageEncounterInput): LspPlannerResult {
+export interface PlanLanguageEncounterOptions {
+	commandAvailabilityOptions?: CommandAvailabilityOptions;
+	commandAvailable?: (command: string, cwd: string) => boolean;
+}
+
+export function planLanguageEncounter(
+	input: PlanLanguageEncounterInput,
+	options: PlanLanguageEncounterOptions = {},
+): LspPlannerResult {
 	if (!input.languageId) {
 		return {
 			action: "none",
@@ -28,7 +36,11 @@ export function planLanguageEncounter(input: PlanLanguageEncounterInput): LspPla
 		};
 	}
 
-	const available = isCommandAvailable(server.command, input.cwd);
+	const commandAvailable =
+		options.commandAvailable ??
+		((command: string, commandCwd: string) =>
+			isCommandAvailable(command, commandCwd, options.commandAvailabilityOptions));
+	const available = commandAvailable(server.command, input.cwd);
 	if (input.languageEnabled) {
 		if (available) {
 			return {
