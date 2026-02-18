@@ -23,6 +23,7 @@ import {
 	createEditTool,
 	createFindTool,
 	createGrepTool,
+	createLspTool,
 	createLsTool,
 	createReadOnlyTools,
 	createReadTool,
@@ -30,6 +31,7 @@ import {
 	editTool,
 	findTool,
 	grepTool,
+	lspTool,
 	lsTool,
 	readOnlyTools,
 	readTool,
@@ -104,6 +106,7 @@ export {
 	editTool,
 	writeTool,
 	grepTool,
+	lspTool,
 	findTool,
 	lsTool,
 	codingTools,
@@ -117,6 +120,7 @@ export {
 	createEditTool,
 	createWriteTool,
 	createGrepTool,
+	createLspTool,
 	createFindTool,
 	createLsTool,
 };
@@ -238,7 +242,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		thinkingLevel = "off";
 	}
 
-	const defaultActiveToolNames: ToolName[] = ["read", "bash", "edit", "write"];
+	const defaultActiveToolNames: ToolName[] = settingsManager.getLspEnabled()
+		? ["read", "bash", "edit", "write", "lsp"]
+		: ["read", "bash", "edit", "write"];
 	const initialActiveToolNames: ToolName[] = options.tools
 		? options.tools.map((t) => t.name).filter((n): n is ToolName => n in allTools)
 		: defaultActiveToolNames;
