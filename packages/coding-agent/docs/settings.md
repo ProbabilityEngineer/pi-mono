@@ -138,7 +138,7 @@ When a provider requests a retry delay longer than `maxDelayMs` (e.g., Google's 
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `lsp.enabled` | boolean | `true` | Master toggle for LSP encounter automation |
+| `lsp.enabled` | boolean | `true` | Master toggle for LSP encounter automation and built-in `lsp` tool availability |
 | `lsp.autoEnableOnEncounter` | boolean | `true` | Auto-enable a language when encountered |
 | `lsp.autoInstallOnEncounter` | boolean | `true` | Auto-install missing language servers when encountered |
 | `lsp.languages` | object | `{}` | Per-project language enable map (empty means all disabled for new repos) |
