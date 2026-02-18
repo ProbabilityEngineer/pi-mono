@@ -12,6 +12,8 @@ export type HashlineEditOperation =
 
 const HASHLINE_REF_RE = /(\d+):([0-9a-fA-F]+)/;
 const HASHLINE_TEXT_PREFIX_RE = /^\d+:[0-9a-fA-F]{2,}\|/;
+const HASH_HEX_LENGTH = 6;
+const MIN_COMPAT_HASH_HEX_LENGTH = 2;
 const RECOVERY_WINDOW = 8;
 
 function normalizeHashInput(line: string): string {
@@ -23,7 +25,7 @@ function normalizeHashInput(line: string): string {
 
 export function computeLineHash(_lineNum: number, line: string): string {
 	const digest = createHash("sha1").update(normalizeHashInput(line), "utf8").digest("hex");
-	return digest.slice(0, 2);
+	return digest.slice(0, HASH_HEX_LENGTH);
 }
 
 export function formatHashLines(content: string, startLine = 1): string {
@@ -50,7 +52,17 @@ export function parseLineRef(ref: string): HashlineRef {
 	if (line < 1) {
 		throw new Error(`Invalid line reference "${ref}". Line number must be >= 1.`);
 	}
-	return { line, hash: match[2] };
+	const hash = match[2];
+	if (hash.length < MIN_COMPAT_HASH_HEX_LENGTH) {
+		throw new Error(
+			`Invalid line reference "${ref}". Hash must contain at least ${MIN_COMPAT_HASH_HEX_LENGTH} hex chars.`,
+		);
+	}
+	return { line, hash };
+}
+
+function hashMatches(expectedHashOrPrefix: string, actualHash: string): boolean {
+	return actualHash.startsWith(expectedHashOrPrefix);
 }
 
 function assertNoHashlinePrefixedContent(text: string): void {
@@ -65,7 +77,7 @@ function assertNoHashlinePrefixedContent(text: string): void {
 function getMatchingLinesByHash(hash: string, fileLines: string[]): number[] {
 	const matches: number[] = [];
 	for (let i = 0; i < fileLines.length; i++) {
-		if (computeLineHash(i + 1, fileLines[i]) === hash) {
+		if (hashMatches(hash, computeLineHash(i + 1, fileLines[i]))) {
 			matches.push(i + 1);
 		}
 	}
@@ -80,7 +92,7 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 	const inRange = ref.line >= 1 && ref.line <= fileLines.length;
 	if (inRange) {
 		const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
-		if (actualHash === ref.hash) {
+		if (hashMatches(ref.hash, actualHash)) {
 			return ref;
 		}
 	}
@@ -89,7 +101,7 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 	const windowEnd = Math.min(fileLines.length, ref.line + RECOVERY_WINDOW);
 	const nearbyMatches: number[] = [];
 	for (let line = windowStart; line <= windowEnd; line++) {
-		if (computeLineHash(line, fileLines[line - 1]) === ref.hash) {
+		if (hashMatches(ref.hash, computeLineHash(line, fileLines[line - 1]))) {
 			nearbyMatches.push(line);
 		}
 	}
