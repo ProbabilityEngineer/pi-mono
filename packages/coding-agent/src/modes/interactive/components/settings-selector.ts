@@ -24,9 +24,11 @@ const THINKING_DESCRIPTIONS: Record<ThinkingLevel, string> = {
 
 export interface SettingsConfig {
 	autoCompact: boolean;
+	hashlineMode: boolean;
 	showImages: boolean;
 	autoResizeImages: boolean;
 	blockImages: boolean;
+	lspEnabled: boolean;
 	enableSkillCommands: boolean;
 	steeringMode: "all" | "one-at-a-time";
 	followUpMode: "all" | "one-at-a-time";
@@ -47,9 +49,11 @@ export interface SettingsConfig {
 
 export interface SettingsCallbacks {
 	onAutoCompactChange: (enabled: boolean) => void;
+	onHashlineModeChange: (enabled: boolean) => void;
 	onShowImagesChange: (enabled: boolean) => void;
 	onAutoResizeImagesChange: (enabled: boolean) => void;
 	onBlockImagesChange: (blocked: boolean) => void;
+	onLspEnabledChange: (enabled: boolean) => void;
 	onEnableSkillCommandsChange: (enabled: boolean) => void;
 	onSteeringModeChange: (mode: "all" | "one-at-a-time") => void;
 	onFollowUpModeChange: (mode: "all" | "one-at-a-time") => void;
@@ -147,6 +151,13 @@ export class SettingsSelectorComponent extends Container {
 				label: "Auto-compact",
 				description: "Automatically compact context when it gets too large",
 				currentValue: config.autoCompact ? "true" : "false",
+				values: ["true", "false"],
+			},
+			{
+				id: "hashline-mode",
+				label: "Hashline mode",
+				description: "Use hashline anchors for line edits",
+				currentValue: config.hashlineMode ? "true" : "false",
 				values: ["true", "false"],
 			},
 			{
@@ -294,9 +305,19 @@ export class SettingsSelectorComponent extends Container {
 			values: ["true", "false"],
 		});
 
-		// Hardware cursor toggle (insert after skill-commands)
+		// LSP toggle (insert after skill-commands)
 		const skillCommandsIndex = items.findIndex((item) => item.id === "skill-commands");
 		items.splice(skillCommandsIndex + 1, 0, {
+			id: "lsp-enabled",
+			label: "LSP",
+			description: "Enable language intelligence tool",
+			currentValue: config.lspEnabled ? "true" : "false",
+			values: ["true", "false"],
+		});
+
+		// Hardware cursor toggle (insert after lsp-enabled)
+		const lspEnabledIndex = items.findIndex((item) => item.id === "lsp-enabled");
+		items.splice(lspEnabledIndex + 1, 0, {
 			id: "show-hardware-cursor",
 			label: "Show hardware cursor",
 			description: "Show the terminal cursor while still positioning it for IME support",
@@ -346,6 +367,9 @@ export class SettingsSelectorComponent extends Container {
 					case "autocompact":
 						callbacks.onAutoCompactChange(newValue === "true");
 						break;
+					case "hashline-mode":
+						callbacks.onHashlineModeChange(newValue === "true");
+						break;
 					case "show-images":
 						callbacks.onShowImagesChange(newValue === "true");
 						break;
@@ -357,6 +381,9 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "skill-commands":
 						callbacks.onEnableSkillCommandsChange(newValue === "true");
+						break;
+					case "lsp-enabled":
+						callbacks.onLspEnabledChange(newValue === "true");
 						break;
 					case "steering-mode":
 						callbacks.onSteeringModeChange(newValue as "all" | "one-at-a-time");

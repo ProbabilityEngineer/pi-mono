@@ -284,4 +284,20 @@ describe("SettingsManager", () => {
 			expect(manager.getLspLanguageEnabled("python")).toBe(true);
 		});
 	});
+
+	describe("edit settings", () => {
+		it("should default to hashline edit mode", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getEditMode()).toBe("hashline");
+		});
+
+		it("should persist and reload edit mode", async () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			manager.setEditMode("replace");
+			await manager.flush();
+
+			manager.reload();
+			expect(manager.getEditMode()).toBe("replace");
+		});
+	});
 });
