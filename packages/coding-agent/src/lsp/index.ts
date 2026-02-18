@@ -27,7 +27,17 @@ export {
 	syncContent,
 	WARMUP_TIMEOUT_MS,
 } from "./client.js";
-export { getServersForLanguage, isCommandAvailable, loadLspServers, resolveCommand } from "./config.js";
+export {
+	type CommandProbeContract,
+	getDefaultCommandProbeContract,
+	getServersForLanguage,
+	isCommandAvailable,
+	loadLspServers,
+	probeCommandInvocation,
+	probeCommandInvocationWithContract,
+	resolveCommand,
+	resolveCommandOnPath,
+} from "./config.js";
 export { detectLanguageIdFromPath } from "./detection.js";
 export { applyTextEditsToString, applyWorkspaceEdit } from "./edits.js";
 export {
@@ -52,6 +62,7 @@ export {
 	wrapWithLspmux,
 } from "./lspmux.js";
 export { type PlanLanguageEncounterInput, planLanguageEncounter } from "./planner.js";
+export { runCommandProbe } from "./probe.js";
 export { formatDiagnostics, formatWorkspaceEdit } from "./render.js";
 export type {
 	Diagnostic,
