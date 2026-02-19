@@ -7,6 +7,7 @@ import { AuthStorage } from "./auth-storage.js";
 import { DEFAULT_THINKING_LEVEL } from "./defaults.js";
 import type { ExtensionRunner, LoadExtensionsResult, ToolDefinition } from "./extensions/index.js";
 import { resolveHooksConfig } from "./hooks/index.js";
+import type { HookConfigResolution } from "./hooks/types.js";
 import { convertToLlm } from "./messages.js";
 import { ModelRegistry } from "./model-registry.js";
 import { findInitialModel } from "./model-resolver.js";
@@ -90,6 +91,8 @@ export interface CreateAgentSessionResult {
 	extensionsResult: LoadExtensionsResult;
 	/** Warning if session was restored with a different model than saved */
 	modelFallbackMessage?: string;
+	/** Hook config resolution diagnostics for startup UX/logging. */
+	hookConfigResolution: HookConfigResolution;
 }
 
 // Re-exports
@@ -386,5 +389,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		session,
 		extensionsResult,
 		modelFallbackMessage,
+		hookConfigResolution,
 	};
 }
