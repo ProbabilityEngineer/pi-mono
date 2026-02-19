@@ -1,4 +1,5 @@
 import { runHookCommand } from "./command-runner.js";
+import { redactSensitiveText } from "./logging-guardrails.js";
 import type {
 	HookCommandPayload,
 	HookDefinition,
@@ -57,16 +58,19 @@ export class HookRunner {
 			const durationMs = Date.now() - startedAt;
 
 			const failed = result.code !== 0 && result.code !== 2;
+			const redactedStdout = redactSensitiveText(result.stdout);
+			const redactedStderr = redactSensitiveText(result.stderr);
 			invocations.push({
 				eventName,
 				command: hook.command,
 				configSourceName: this.configSourceName,
 				code: result.code,
 				durationMs,
-				stdout: result.stdout,
-				stderr: result.stderr,
+				stdout: redactedStdout.value,
+				stderr: redactedStderr.value,
 				timedOut: result.timedOut,
 				failed,
+				redacted: redactedStdout.redacted || redactedStderr.redacted,
 			});
 		}
 
@@ -127,38 +131,49 @@ export class HookRunner {
 			});
 			const durationMs = Date.now() - startedAt;
 			const failed = result.code !== 0 && result.code !== 2;
+			const redactedStdout = redactSensitiveText(result.stdout);
+			const redactedStderr = redactSensitiveText(result.stderr);
 			const invocation: HookInvocationRecord = {
 				eventName: "PreToolUse",
 				command: hook.command,
 				configSourceName: this.configSourceName,
 				code: result.code,
 				durationMs,
-				stdout: result.stdout,
-				stderr: result.stderr,
+				stdout: redactedStdout.value,
+				stderr: redactedStderr.value,
 				timedOut: result.timedOut,
 				failed,
 				decision: "allow",
+				redacted: redactedStdout.redacted || redactedStderr.redacted,
 			};
 			invocations.push(invocation);
 
 			if (result.code === 2) {
 				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook";
+				const redactedReason = redactSensitiveText(reason);
 				invocation.decision = "deny";
-				invocation.reason = reason;
+				invocation.reason = redactedReason.value;
+				if (redactedReason.redacted) {
+					invocation.redacted = true;
+				}
 				return {
 					blocked: true,
-					reason,
+					reason: redactedReason.value,
 					invocations,
 				};
 			}
 
 			if (failed && hook.failOpen === false) {
 				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook failure";
+				const redactedReason = redactSensitiveText(reason);
 				invocation.decision = "deny";
-				invocation.reason = reason;
+				invocation.reason = redactedReason.value;
+				if (redactedReason.redacted) {
+					invocation.redacted = true;
+				}
 				return {
 					blocked: true,
-					reason,
+					reason: redactedReason.value,
 					invocations,
 				};
 			}

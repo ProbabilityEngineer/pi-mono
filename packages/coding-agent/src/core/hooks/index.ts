@@ -17,6 +17,7 @@ export {
 	type GastownCommandAvailability,
 	resolveGastownHookDefaults,
 } from "./gastown-defaults.js";
+export { type RedactionResult, redactSensitiveText } from "./logging-guardrails.js";
 export { HookRunner } from "./runner.js";
 export type {
 	HookCommandPayload,
