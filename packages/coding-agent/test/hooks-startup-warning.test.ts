@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { buildInvalidHookConfigWarning, buildInvalidHookConfigWarningDetails } from "../src/core/hooks/startup-warning.js";
+import {
+	buildInvalidHookConfigWarning,
+	buildInvalidHookConfigWarningDetails,
+} from "../src/core/hooks/startup-warning.js";
 
 describe("hooks invalid-config startup warning", () => {
 	test("includes source, reason, and disabled-hooks action", () => {
