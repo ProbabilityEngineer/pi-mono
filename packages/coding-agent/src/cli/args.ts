@@ -40,6 +40,8 @@ export interface Args {
 	listModels?: string | true;
 	offline?: boolean;
 	verbose?: boolean;
+	gastown?: boolean;
+	hooksConfig?: string;
 	messages: string[];
 	fileArgs: string[];
 	/** Unknown flags (potentially extension flags) - map of flag name to value */
@@ -154,6 +156,10 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			result.verbose = true;
 		} else if (arg === "--offline") {
 			result.offline = true;
+		} else if (arg === "--gastown") {
+			result.gastown = true;
+		} else if (arg === "--hooks-config" && i + 1 < args.length) {
+			result.hooksConfig = args[++i];
 		} else if (arg.startsWith("@")) {
 			result.fileArgs.push(arg.slice(1)); // Remove @ prefix
 		} else if (arg.startsWith("--") && extensionFlags) {
@@ -221,6 +227,8 @@ ${chalk.bold("Options:")}
   --list-models [search]         List available models (with optional fuzzy search)
   --verbose                      Force verbose startup (overrides quietStartup setting)
   --offline                      Disable startup network operations (same as PI_OFFLINE=1)
+  --gastown                      Enable Gastown compatibility mode
+  --hooks-config <path>          Load hooks config from JSON file
   --help, -h                     Show this help
   --version, -v                  Show version number
 
@@ -303,6 +311,8 @@ ${chalk.bold("Environment Variables:")}
   PI_OFFLINE                       - Disable startup network operations when set to 1/true/yes
   PI_SHARE_VIEWER_URL              - Base URL for /share command (default: https://pi.dev/session/)
   PI_AI_ANTIGRAVITY_VERSION        - Override Antigravity User-Agent version (e.g., 1.23.0)
+  PI_GASTOWN_MODE                  - Enable Gastown compatibility mode (set to 1)
+  PI_HOOKS_JSON                    - Inline hooks config JSON (lower precedence than --hooks-config)
 
 ${chalk.bold("Available Tools (default: read, bash, edit, write):")}
   read   - Read file contents
