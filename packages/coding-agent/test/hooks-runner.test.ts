@@ -114,4 +114,17 @@ describe("HookRunner", () => {
 		expect(result.invocations[0].stdout).toContain("OPENAI_API_KEY=[REDACTED]");
 		expect(result.invocations[0].redacted).toBe(true);
 	});
+
+	test("truncates long invocation output for logs", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "python3 - <<'PY'\nprint('x' * 5000)\nPY" }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-6");
+
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].truncated).toBe(true);
+		expect(result.invocations[0].stdoutTruncated).toBe(true);
+		expect(result.invocations[0].stdout).toContain("...[truncated]");
+	});
 });
