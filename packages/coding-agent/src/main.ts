@@ -18,6 +18,7 @@ import { AuthStorage } from "./core/auth-storage.js";
 import { DEFAULT_THINKING_LEVEL } from "./core/defaults.js";
 import { exportFromFile } from "./core/export-html/index.js";
 import type { LoadExtensionsResult } from "./core/extensions/index.js";
+import { buildInvalidHookConfigWarning } from "./core/hooks/startup-warning.js";
 import { KeybindingsManager } from "./core/keybindings.js";
 import { ModelRegistry } from "./core/model-registry.js";
 import { resolveCliModel, resolveModelScope, type ScopedModel } from "./core/model-resolver.js";
@@ -724,11 +725,7 @@ export async function main(args: string[]) {
 	const { session, modelFallbackMessage, hookConfigResolution } = await createAgentSession(sessionOptions);
 
 	if (hookConfigResolution.invalidRuntimeConfig) {
-		const source = hookConfigResolution.invalidRuntimeSourceName ?? "runtime";
-		const reason = hookConfigResolution.invalidRuntimeReason ?? "invalid hook config";
-		console.error(
-			chalk.yellow(`Warning: invalid hook config from ${source} (${reason}). Hooks are disabled for this session.`),
-		);
+		console.error(chalk.yellow(buildInvalidHookConfigWarning(hookConfigResolution)));
 	}
 
 	if (!isInteractive && !session.model) {
