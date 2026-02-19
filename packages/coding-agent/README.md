@@ -415,8 +415,16 @@ PI_HOOKS_JSON='{"PreToolUse":[{"command":"echo guard"}]}' pi
 Config precedence:
 1. `--hooks-config <path>`
 2. `PI_HOOKS_JSON`
-3. (future optional) `.claude/settings*.json` loader
+3. `.claude/settings*.json` loader when explicitly enabled
 4. built-in defaults when `--gastown` or `PI_GASTOWN_MODE=1`
+
+Enable `.claude/settings*.json` hook loading:
+
+```bash
+pi --claude-settings-hooks
+# or
+PI_ENABLE_CLAUDE_SETTINGS_HOOKS=1 pi
+```
 
 ---
 
@@ -549,6 +557,7 @@ Combine `--no-*` with explicit flags to load exactly what you need, ignoring set
 | `--append-system-prompt <text>` | Append to system prompt |
 | `--gastown` | Enable Gastown compatibility hooks mode |
 | `--hooks-config <path>` | Load hooks config JSON from file |
+| `--claude-settings-hooks` | Enable optional `.claude/settings*.json` hook loading |
 | `--verbose` | Force verbose startup |
 | `-h`, `--help` | Show help |
 | `-v`, `--version` | Show version |
@@ -599,6 +608,7 @@ pi --thinking high "Solve this complex problem"
 | `PI_PACKAGE_DIR` | Override package directory (useful for Nix/Guix where store paths tokenize poorly) |
 | `PI_GASTOWN_MODE` | Set to `1` to enable Gastown compatibility hooks mode |
 | `PI_HOOKS_JSON` | Inline hooks config JSON (lower precedence than `--hooks-config`) |
+| `PI_ENABLE_CLAUDE_SETTINGS_HOOKS` | Set to `1` to enable `.claude/settings*.json` hook loading |
 | `PI_SKIP_VERSION_CHECK` | Skip version check at startup |
 | `PI_CACHE_RETENTION` | Set to `long` for extended prompt cache (Anthropic: 1h, OpenAI: 24h) |
 | `VISUAL`, `EDITOR` | External editor for Ctrl+G |
