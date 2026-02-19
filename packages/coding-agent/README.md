@@ -418,6 +418,17 @@ Config precedence:
 3. `.claude/settings*.json` loader when explicitly enabled
 4. built-in defaults when `--gastown` or `PI_GASTOWN_MODE=1`
 
+Invalid runtime config behavior:
+- If `--hooks-config` or `PI_HOOKS_JSON` is invalid, pi does not crash.
+- Hooks are disabled for the current session and startup shows:
+  - `Warning: invalid hook config from <source> (<reason>). Hooks are disabled for this session.`
+- When runtime config is invalid, pi does not fall back to gastown built-in defaults.
+
+Logging guardrails:
+- Hook invocation logs are always redacted for common secret/token patterns.
+- Hook log fields are truncated to 2000 chars per stream (`stdout`/`stderr`), including verbose hook output.
+- Session execution continues even if hooks fail.
+
 Enable `.claude/settings*.json` hook loading:
 
 ```bash
@@ -425,6 +436,11 @@ pi --claude-settings-hooks
 # or
 PI_ENABLE_CLAUDE_SETTINGS_HOOKS=1 pi
 ```
+
+Troubleshooting:
+- If hooks appear inactive, start with `--verbose` and check for the invalid-config warning above.
+- Confirm the winning source in precedence order, then validate JSON shape and hook event names.
+- If running with gastown defaults, verify `gt`/`bd` are on `PATH` (defaults are skipped when binaries are unavailable).
 
 ---
 
