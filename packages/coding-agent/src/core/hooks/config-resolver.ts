@@ -169,6 +169,21 @@ function isRuntimeConfigSource(sourceName: string): boolean {
 	return sourceName === "cli" || sourceName === "env" || sourceName === "claude_settings";
 }
 
+function normalizeRuntimeConfigErrorReason(sourceName: string, error: unknown): string {
+	if (error instanceof SyntaxError) {
+		return "invalid JSON";
+	}
+
+	const code = (error as NodeJS.ErrnoException | undefined)?.code;
+	if (sourceName === "cli" && code === "ENOENT") {
+		return "hooks config file not found";
+	}
+
+	const message = error instanceof Error ? error.message : String(error);
+	const compact = message.replace(/\s+/g, " ").trim();
+	return compact.length > 160 ? `${compact.slice(0, 157)}...` : compact;
+}
+
 export interface ResolveHooksConfigOptions {
 	sources?: HookConfigSource[];
 }
@@ -199,7 +214,7 @@ export async function resolveHooksConfig(
 				};
 			}
 		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
+			const message = normalizeRuntimeConfigErrorReason(source.name, error);
 			errors.push(`[${source.name}] ${message}`);
 			const isRuntimeSource = isRuntimeConfigSource(source.name);
 			diagnostics.push({
