@@ -619,6 +619,13 @@ pi --thinking high "Solve this complex problem"
 
 See [CONTRIBUTING.md](../../CONTRIBUTING.md) for guidelines and [docs/development.md](docs/development.md) for setup, forking, and debugging.
 
+Hashline concurrency stress validation:
+
+```bash
+cd packages/coding-agent
+npx tsx ../../node_modules/vitest/dist/cli.js --run test/hashline-concurrency-stress.test.ts
+```
+
 ---
 
 ## License
