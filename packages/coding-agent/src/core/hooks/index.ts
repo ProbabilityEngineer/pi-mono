@@ -12,6 +12,11 @@ export {
 	type ResolveHooksConfigOptions,
 	resolveHooksConfig,
 } from "./config-resolver.js";
+export {
+	buildGastownHookDefaults,
+	type GastownCommandAvailability,
+	resolveGastownHookDefaults,
+} from "./gastown-defaults.js";
 export { HookRunner } from "./runner.js";
 export type {
 	HookCommandPayload,
