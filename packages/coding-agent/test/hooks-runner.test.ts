@@ -198,4 +198,24 @@ describe("HookRunner", () => {
 			expect(result.invocations[0].stdout).toContain("[REDACTED]");
 		}
 	});
+
+	test("truncates deny reason on failOpen=false path", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [
+				{
+					command: "python3 - <<'PY'\nprint('x' * 5000)\nraise SystemExit(1)\nPY",
+					failOpen: false,
+				},
+			],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-10");
+
+		expect(result.blocked).toBe(true);
+		expect(result.reason).toContain("...[truncated]");
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].decision).toBe("deny");
+		expect(result.invocations[0].truncated).toBe(true);
+		expect(result.invocations[0].stdoutTruncated).toBe(true);
+	});
 });
