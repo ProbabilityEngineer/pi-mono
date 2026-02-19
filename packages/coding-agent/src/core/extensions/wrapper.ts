@@ -10,6 +10,7 @@ import type { RegisteredTool, ToolCallEventResult } from "./types.js";
 export interface HookLifecycleOptions {
 	hookRunner?: HookRunner;
 	cwd: string;
+	onPostToolUseAdditionalContext?: (context: string) => Promise<void> | void;
 }
 
 /**
@@ -114,7 +115,15 @@ export function wrapToolWithExtensions<T>(
 				}
 
 				if (hookOptions?.hookRunner) {
-					await hookOptions.hookRunner.runPostToolUse(hookOptions.cwd, tool.name, params, toolCallId);
+					const hookResult = await hookOptions.hookRunner.runPostToolUse(
+						hookOptions.cwd,
+						tool.name,
+						params,
+						toolCallId,
+					);
+					if (hookResult.additionalContext && hookOptions.onPostToolUseAdditionalContext) {
+						await hookOptions.onPostToolUseAdditionalContext(hookResult.additionalContext);
+					}
 				}
 
 				return nextResult;
@@ -132,7 +141,15 @@ export function wrapToolWithExtensions<T>(
 					});
 				}
 				if (hookOptions?.hookRunner) {
-					await hookOptions.hookRunner.runPostToolUse(hookOptions.cwd, tool.name, params, toolCallId);
+					const hookResult = await hookOptions.hookRunner.runPostToolUse(
+						hookOptions.cwd,
+						tool.name,
+						params,
+						toolCallId,
+					);
+					if (hookResult.additionalContext && hookOptions.onPostToolUseAdditionalContext) {
+						await hookOptions.onPostToolUseAdditionalContext(hookResult.additionalContext);
+					}
 				}
 				throw err;
 			}

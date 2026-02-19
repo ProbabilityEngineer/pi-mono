@@ -331,6 +331,20 @@ export class AgentSession {
 		this._hookSystemPromptContext = undefined;
 	}
 
+	private _enqueuePostToolHookContext(context: string): void {
+		const text = context.trim();
+		if (!text) {
+			return;
+		}
+		this._pendingNextTurnMessages.push({
+			role: "custom",
+			customType: "hook_post_tool_use",
+			content: [{ type: "text", text }],
+			display: false,
+			timestamp: Date.now(),
+		});
+	}
+
 	/** Model registry for API key resolution and model discovery */
 	get modelRegistry(): ModelRegistry {
 		return this._modelRegistry;
@@ -2106,12 +2120,18 @@ export class AgentSession {
 			const wrappedActiveTools = wrapToolsWithExtensions(activeToolsArray, this._extensionRunner, {
 				hookRunner: this._hookRunner,
 				cwd: this._cwd,
+				onPostToolUseAdditionalContext: (context) => {
+					this._enqueuePostToolHookContext(context);
+				},
 			});
 			this.agent.setTools(wrappedActiveTools as AgentTool[]);
 
 			const wrappedAllTools = wrapToolsWithExtensions(Array.from(toolRegistry.values()), this._extensionRunner, {
 				hookRunner: this._hookRunner,
 				cwd: this._cwd,
+				onPostToolUseAdditionalContext: (context) => {
+					this._enqueuePostToolHookContext(context);
+				},
 			});
 			this._toolRegistry = new Map(wrappedAllTools.map((tool) => [tool.name, tool]));
 		} else {
