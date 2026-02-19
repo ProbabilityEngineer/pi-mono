@@ -90,6 +90,9 @@ export interface HookInvocationRecord {
 	decision?: "allow" | "deny" | "ask";
 	reason?: string;
 	redacted?: boolean;
+	stdoutTruncated?: boolean;
+	stderrTruncated?: boolean;
+	truncated?: boolean;
 }
 
 export interface HookSessionStartResult {

@@ -3,6 +3,14 @@ export interface RedactionResult {
 	redacted: boolean;
 }
 
+export interface TruncationResult {
+	value: string;
+	truncated: boolean;
+}
+
+export const HOOK_LOG_MAX_CHARS = 2000;
+const LOG_TRUNCATION_SUFFIX = "\n...[truncated]";
+
 const SECRET_PATTERNS: RegExp[] = [
 	/\bsk-[A-Za-z0-9_-]{16,}\b/g,
 	/\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\b/g,
@@ -42,4 +50,14 @@ export function redactSensitiveText(input: string): RedactionResult {
 	});
 
 	return { value, redacted };
+}
+
+export function truncateHookLogText(input: string, maxChars: number = HOOK_LOG_MAX_CHARS): TruncationResult {
+	if (input.length <= maxChars) {
+		return { value: input, truncated: false };
+	}
+	return {
+		value: `${input.slice(0, maxChars)}${LOG_TRUNCATION_SUFFIX}`,
+		truncated: true,
+	};
 }
