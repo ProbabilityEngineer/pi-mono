@@ -8,6 +8,7 @@ import type { HookPostToolUseResult, HookPreToolUseResult, HookRunner } from "..
 class HookRunnerStub {
 	readonly calls: string[] = [];
 	block = false;
+	postContext: string | undefined = undefined;
 
 	async runPreToolUse(): Promise<HookPreToolUseResult> {
 		this.calls.push("pre");
@@ -21,6 +22,7 @@ class HookRunnerStub {
 	async runPostToolUse(): Promise<HookPostToolUseResult> {
 		this.calls.push("post");
 		return {
+			additionalContext: this.postContext,
 			invocations: [],
 		};
 	}
@@ -100,5 +102,26 @@ describe("hook lifecycle in wrapToolWithExtensions", () => {
 
 		await expect(wrapped.execute("tool-use-3", {}, undefined, undefined)).rejects.toThrow("tool failed");
 		expect(hookRunner.calls).toEqual(["pre", "post"]);
+	});
+
+	test("forwards PostToolUse additional context through hook options callback", async () => {
+		const hookRunner = new HookRunnerStub();
+		hookRunner.postContext = "post hook context";
+		const contexts: string[] = [];
+		const tool = createTool(async () => {
+			const result: AgentToolResult<unknown> = { content: [{ type: "text", text: "ok" }], details: {} };
+			return result;
+		});
+
+		const wrapped = wrapToolWithExtensions(tool, createRunnerStub(), {
+			hookRunner: hookRunner as unknown as HookRunner,
+			cwd: process.cwd(),
+			onPostToolUseAdditionalContext: (context) => {
+				contexts.push(context);
+			},
+		});
+
+		await wrapped.execute("tool-use-4", {}, undefined, undefined);
+		expect(contexts).toEqual(["post hook context"]);
 	});
 });
