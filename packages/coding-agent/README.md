@@ -48,6 +48,7 @@ Pi runs in four modes: interactive, print or JSON, RPC for process integration, 
   - [Extensions](#extensions)
   - [Themes](#themes)
   - [Pi Packages](#pi-packages)
+- [Gastown Hooks Mode](#gastown-hooks-mode)
 - [Programmatic Usage](#programmatic-usage)
 - [Philosophy](#philosophy)
 - [CLI Reference](#cli-reference)
@@ -388,6 +389,37 @@ See [docs/packages.md](docs/packages.md).
 
 ---
 
+## Gastown Hooks Mode
+
+Pi can run Claude-style lifecycle hooks without requiring Claude Code.
+
+Enable built-in Gastown defaults:
+
+```bash
+pi --gastown
+```
+
+Built-in defaults in gastown mode:
+- `SessionStart`: `gt prime` (skipped when `gt` is unavailable)
+- `PreToolUse`: `gt tap guard` (skipped when `gt` is unavailable)
+- `PreCompact`: `bd sync` (skipped when `bd` is unavailable)
+
+You can also provide explicit hook config (higher precedence than gastown defaults):
+
+```bash
+pi --hooks-config ./hooks.json
+# or
+PI_HOOKS_JSON='{"PreToolUse":[{"command":"echo guard"}]}' pi
+```
+
+Config precedence:
+1. `--hooks-config <path>`
+2. `PI_HOOKS_JSON`
+3. (future optional) `.claude/settings*.json` loader
+4. built-in defaults when `--gastown` or `PI_GASTOWN_MODE=1`
+
+---
+
 ## Programmatic Usage
 
 ### SDK
@@ -515,6 +547,8 @@ Combine `--no-*` with explicit flags to load exactly what you need, ignoring set
 |--------|-------------|
 | `--system-prompt <text>` | Replace default prompt (context files and skills still appended) |
 | `--append-system-prompt <text>` | Append to system prompt |
+| `--gastown` | Enable Gastown compatibility hooks mode |
+| `--hooks-config <path>` | Load hooks config JSON from file |
 | `--verbose` | Force verbose startup |
 | `-h`, `--help` | Show help |
 | `-v`, `--version` | Show version |
@@ -563,6 +597,8 @@ pi --thinking high "Solve this complex problem"
 |----------|-------------|
 | `PI_CODING_AGENT_DIR` | Override config directory (default: `~/.pi/agent`) |
 | `PI_PACKAGE_DIR` | Override package directory (useful for Nix/Guix where store paths tokenize poorly) |
+| `PI_GASTOWN_MODE` | Set to `1` to enable Gastown compatibility hooks mode |
+| `PI_HOOKS_JSON` | Inline hooks config JSON (lower precedence than `--hooks-config`) |
 | `PI_SKIP_VERSION_CHECK` | Skip version check at startup |
 | `PI_CACHE_RETENTION` | Set to `long` for extended prompt cache (Anthropic: 1h, OpenAI: 24h) |
 | `VISUAL`, `EDITOR` | External editor for Ctrl+G |
