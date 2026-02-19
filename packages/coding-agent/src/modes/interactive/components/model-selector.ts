@@ -33,6 +33,10 @@ interface ScopedModelItem {
 
 type ModelScope = "all" | "scoped";
 
+function isFreeModelId(modelId: string): boolean {
+	return modelId.toLowerCase().includes("free");
+}
+
 /**
  * Component that renders a model selector with search
  */
@@ -65,6 +69,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	private scope: ModelScope = "all";
 	private scopeText?: Text;
 	private scopeHintText?: Text;
+	private readonly freeOnlyFilterEnabled: boolean;
 
 	constructor(
 		tui: TUI,
@@ -84,6 +89,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		this.modelRegistry = modelRegistry;
 		this.scopedModels = scopedModels;
 		this.scope = scopedModels.length > 0 ? "scoped" : "all";
+		this.freeOnlyFilterEnabled = this.settingsManager.getModelFreeOnlyFilter();
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
 
@@ -168,13 +174,15 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			return;
 		}
 
-		this.allModels = this.sortModels(models);
-		this.scopedModelItems = this.sortModels(
-			this.scopedModels.map((scoped) => ({
-				provider: scoped.model.provider,
-				id: scoped.model.id,
-				model: scoped.model,
-			})),
+		this.allModels = this.applyModelFilters(this.sortModels(models));
+		this.scopedModelItems = this.applyModelFilters(
+			this.sortModels(
+				this.scopedModels.map((scoped) => ({
+					provider: scoped.model.provider,
+					id: scoped.model.id,
+					model: scoped.model,
+				})),
+			),
 		);
 		this.activeModels = this.scope === "scoped" ? this.scopedModelItems : this.allModels;
 		this.filteredModels = this.activeModels;
@@ -210,6 +218,13 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			provider,
 			items: groupedItems,
 		}));
+	}
+
+	private applyModelFilters(items: ModelItem[]): ModelItem[] {
+		if (!this.freeOnlyFilterEnabled) {
+			return items;
+		}
+		return items.filter((item) => isFreeModelId(item.id));
 	}
 
 	private getScopeText(): string {
@@ -307,7 +322,10 @@ export class ModelSelectorComponent extends Container implements Focusable {
 				this.listContainer.addChild(new Text(theme.fg("error", line), 0, 0));
 			}
 		} else if (this.filteredModels.length === 0) {
-			this.listContainer.addChild(new Text(theme.fg("muted", "  No matching models"), 0, 0));
+			const message = this.freeOnlyFilterEnabled
+				? '  No matching models. Disable `Models: only "free"` in /settings.'
+				: "  No matching models";
+			this.listContainer.addChild(new Text(theme.fg("muted", message), 0, 0));
 		} else {
 			const selected = this.filteredModels[this.selectedIndex];
 			this.listContainer.addChild(new Spacer(1));
