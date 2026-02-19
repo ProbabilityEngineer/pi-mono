@@ -150,6 +150,7 @@ Type `/` in the editor to trigger commands. [Extensions](#extensions) can regist
 |---------|-------------|
 | `/login`, `/logout` | OAuth authentication |
 | `/model` | Switch models |
+| `/freemodel` | Open model selector filtered to IDs containing `"free"` |
 | `/scoped-models` | Enable/disable models for Ctrl+P cycling |
 | `/settings` | Thinking level, theme, hashline mode, LSP, message delivery, transport |
 | `/resume` | Pick from previous sessions |

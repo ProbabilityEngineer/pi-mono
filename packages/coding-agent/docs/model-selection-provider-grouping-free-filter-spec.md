@@ -1,21 +1,19 @@
-# Model Selection UX Spec: Provider Grouping + Free-Only Filter
+# Model Selection UX Spec: Provider Grouping + Free Models Command
 
 ## Summary
 
 Improve `/model` model discoverability and reduce noise by:
 
 1. Grouping models by provider in `/model` (for example: `opencode`, `openrouter`).
-2. Adding a `/settings` toggle to show only models whose IDs include `"free"` when browsing/selecting models.
-
-The free-only filter defaults to off.
+2. Adding a `/freemodel` command to open a selector that only shows models whose IDs include `"free"`.
 
 ## Scope
 
 ### In Scope
 
 - Interactive model picker (`/model`) grouping by provider.
-- New persisted setting exposed in `/settings`.
-- Model list filtering behavior wired to the setting.
+- New `/freemodel` command in interactive mode.
+- Model list filtering behavior wired to command mode.
 - Tests for grouping, filtering, and persistence.
 - Documentation updates for `/settings` and model selection behavior.
 
@@ -35,40 +33,22 @@ The free-only filter defaults to off.
 - Models inside a provider are sorted using existing sort behavior (preserve current ranking/sort rules).
 - Existing search/filter within selector continues to work across grouped results.
 
-## `/settings` free-only toggle
+## `/freemodel` command
 
-- Add a new boolean setting item in `/settings`:
-  - Label: `Models: show only "free" IDs`
-  - Type: toggle
-  - Default: `false`
-- Help text clarifies the matching rule:
-  - Included when `model.id.toLowerCase().includes("free")` is true.
-- Toggling updates in-memory behavior immediately and persists through `SettingsManager`.
+- Add a new slash command: `/freemodel`.
+- `/freemodel` opens the model selector pre-filtered to model IDs containing `"free"` (case-insensitive).
+- `/model` always shows the full model list (subject to existing auth/scope constraints).
 
 ## Filtering behavior
 
 - When enabled, model selector includes only models with `"free"` in the model ID.
 - Filter applies before rendering grouped sections.
 - Provider headers with zero matching models are hidden.
-- If no models match, show an empty-state hint that references the setting and suggests toggling it off.
-
-## Settings Schema
-
-Add a new persisted setting key:
-
-- `modelFreeOnlyFilter: boolean` (default `false`)
-
-Required updates:
-
-- Default settings definition.
-- Settings manager getter/setter.
-- Interactive settings selector item list.
-- Documentation of key in settings docs/readme tables where applicable.
+- If no models match, show an empty-state hint that directs users to `/model` for the full list.
 
 ## Compatibility and Migration
 
-- Existing user settings files remain valid; missing key resolves to default `false`.
-- No migration step required unless settings schema tests enforce explicit defaults.
+- No persistent setting state for this feature, so no migration is required.
 
 ## Implementation Notes
 
@@ -79,14 +59,12 @@ Required updates:
 ## Acceptance Criteria
 
 1. `/model` displays grouped provider sections for mixed-provider model sets.
-2. `/settings` includes `Models: show only "free" IDs`, default off on fresh config.
-3. With toggle off, all previously visible models remain visible.
-4. With toggle on, only model IDs containing `"free"` are shown (case-insensitive).
+2. `/freemodel` opens a selector filtered to model IDs containing `"free"` (case-insensitive).
+3. `/model` continues to show all previously visible models.
 5. Provider headers with no matching models are not rendered.
 6. Empty-state message appears when filter excludes all models.
-7. Setting persists to settings JSON and is respected after restart.
-8. Unit tests cover grouping, free-only filtering, and persisted setting behavior.
-9. Documentation for model selection/settings reflects new behavior.
+7. Unit tests cover grouping and `/freemodel` filtering behavior.
+8. Documentation for model selection reflects new behavior.
 
 ## Epic Breakdown
 
@@ -100,13 +78,13 @@ Deliverables:
 - Stable provider ordering.
 - Updated selector tests for grouped output and navigation.
 
-## Epic B: Add free-only model filter setting
+## Epic B: Add `/freemodel` filtered selector
 
 Branch: `epic/settings-model-free-only-filter`
 
 Deliverables:
 
-- New settings key and `/settings` toggle (default false).
-- Free-only filter applied to model list before grouping.
+- New `/freemodel` command.
+- Free-only filter applied to selector list before grouping when `/freemodel` is used.
 - Empty-state UX and test coverage.
-- Settings/docs updates.
+- Command/docs updates.

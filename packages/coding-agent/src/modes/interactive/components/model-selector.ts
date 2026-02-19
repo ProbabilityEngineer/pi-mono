@@ -80,6 +80,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		onSelect: (model: Model<any>) => void,
 		onCancel: () => void,
 		initialSearchInput?: string,
+		freeOnlyModels = false,
 	) {
 		super();
 
@@ -89,7 +90,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		this.modelRegistry = modelRegistry;
 		this.scopedModels = scopedModels;
 		this.scope = scopedModels.length > 0 ? "scoped" : "all";
-		this.freeOnlyFilterEnabled = this.settingsManager.getModelFreeOnlyFilter();
+		this.freeOnlyFilterEnabled = freeOnlyModels;
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
 
@@ -323,7 +324,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			}
 		} else if (this.filteredModels.length === 0) {
 			const message = this.freeOnlyFilterEnabled
-				? '  No matching models. Disable `Models: only "free"` in /settings.'
+				? "  No matching free models. Use /model for the full list."
 				: "  No matching models";
 			this.listContainer.addChild(new Text(theme.fg("muted", message), 0, 0));
 		} else {

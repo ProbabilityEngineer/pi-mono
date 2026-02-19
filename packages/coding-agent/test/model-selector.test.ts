@@ -42,7 +42,6 @@ describe("ModelSelectorComponent", () => {
 			getAvailable: vi.fn(async () => models),
 		};
 		const settingsManager = {
-			getModelFreeOnlyFilter: vi.fn(() => false),
 			setDefaultModelAndProvider: vi.fn(),
 		};
 		const selector = new ModelSelectorComponent(
@@ -76,7 +75,6 @@ describe("ModelSelectorComponent", () => {
 			getAvailable: vi.fn(async () => models),
 		};
 		const settingsManager = {
-			getModelFreeOnlyFilter: vi.fn(() => false),
 			setDefaultModelAndProvider: vi.fn(),
 		};
 		const selector = new ModelSelectorComponent(
@@ -107,7 +105,6 @@ describe("ModelSelectorComponent", () => {
 			getAvailable: vi.fn(async () => models),
 		};
 		const settingsManager = {
-			getModelFreeOnlyFilter: vi.fn(() => true),
 			setDefaultModelAndProvider: vi.fn(),
 		};
 		const selector = new ModelSelectorComponent(
@@ -118,6 +115,8 @@ describe("ModelSelectorComponent", () => {
 			[],
 			() => {},
 			() => {},
+			undefined,
+			true,
 		);
 
 		await flushPromises();
@@ -136,7 +135,6 @@ describe("ModelSelectorComponent", () => {
 			getAvailable: vi.fn(async () => models),
 		};
 		const settingsManager = {
-			getModelFreeOnlyFilter: vi.fn(() => true),
 			setDefaultModelAndProvider: vi.fn(),
 		};
 		const selector = new ModelSelectorComponent(
@@ -147,11 +145,13 @@ describe("ModelSelectorComponent", () => {
 			[],
 			() => {},
 			() => {},
+			undefined,
+			true,
 		);
 
 		await flushPromises();
 
 		const output = selector.render(120).join("\n");
-		expect(output).toContain('Disable `Models: only "free"` in /settings');
+		expect(output).toContain("No matching free models. Use /model for the full list.");
 	});
 });
