@@ -40,6 +40,7 @@ describe("resolveHooksConfig", () => {
 		expect(result.config?.SessionStart?.[0].command).toBe("echo cli");
 		expect(result.config?.PreCompact).toBeUndefined();
 		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.hooksDisabledForSession).toBe(false);
 		expect(result.diagnostics).toEqual([]);
 	});
 
@@ -53,6 +54,7 @@ describe("resolveHooksConfig", () => {
 		expect(result.sourceName).toBe("env");
 		expect(result.config?.PreToolUse?.[0].command).toBe("echo env guard");
 		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.hooksDisabledForSession).toBe(false);
 		expect(result.diagnostics).toEqual([]);
 	});
 
@@ -73,6 +75,7 @@ describe("resolveHooksConfig", () => {
 		expect(result.errors).toHaveLength(1);
 		expect(result.errors[0]).toContain("[cli]");
 		expect(result.invalidRuntimeConfig).toBe(true);
+		expect(result.hooksDisabledForSession).toBe(true);
 		expect(result.invalidRuntimeSourceName).toBe("cli");
 		expect(result.invalidRuntimeReason).toBeTruthy();
 		expect(result.diagnostics).toEqual([
@@ -110,6 +113,7 @@ describe("resolveHooksConfig", () => {
 		expect(result.config?.PreToolUse?.[0].command).toBe("echo from-claude");
 		expect(result.config?.PreToolUse?.[0].matcher?.toolNames).toEqual(["bash"]);
 		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.hooksDisabledForSession).toBe(false);
 		expect(result.diagnostics).toEqual([]);
 	});
 
@@ -140,6 +144,19 @@ describe("resolveHooksConfig", () => {
 		expect(result.sourceName).toBe("claude_settings");
 		expect(result.config?.SessionStart?.[0].command).toBe("echo claude-start");
 		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.hooksDisabledForSession).toBe(false);
 		expect(result.diagnostics).toEqual([]);
+	});
+
+	test("does not fall back to gastown defaults when runtime config is invalid", async () => {
+		const result = await resolveHooksConfig({
+			hooksJson: "{",
+			gastownMode: true,
+		});
+
+		expect(result.sourceName).toBe("env");
+		expect(result.config).toBeUndefined();
+		expect(result.invalidRuntimeConfig).toBe(true);
+		expect(result.hooksDisabledForSession).toBe(true);
 	});
 });
