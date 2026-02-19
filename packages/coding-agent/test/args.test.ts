@@ -237,6 +237,11 @@ describe("parseArgs", () => {
 			const result = parseArgs(["--hooks-config", "./hooks.json"]);
 			expect(result.hooksConfig).toBe("./hooks.json");
 		});
+
+		test("parses --claude-settings-hooks", () => {
+			const result = parseArgs(["--claude-settings-hooks"]);
+			expect(result.claudeSettingsHooks).toBe(true);
+		});
 	});
 
 	describe("--no-tools flag", () => {
