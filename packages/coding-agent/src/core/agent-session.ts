@@ -335,6 +335,20 @@ export class AgentSession {
 		this._hookSystemPromptContext = undefined;
 	}
 
+	private _enqueuePostToolHookContext(context: string): void {
+		const text = context.trim();
+		if (!text) {
+			return;
+		}
+		this._pendingNextTurnMessages.push({
+			role: "custom",
+			customType: "hook_post_tool_use",
+			content: [{ type: "text", text }],
+			display: false,
+			timestamp: Date.now(),
+		});
+	}
+
 	/** Model registry for API key resolution and model discovery */
 	get modelRegistry(): ModelRegistry {
 		return this._modelRegistry;
