@@ -42,6 +42,7 @@ export interface Args {
 	verbose?: boolean;
 	gastown?: boolean;
 	hooksConfig?: string;
+	claudeSettingsHooks?: boolean;
 	messages: string[];
 	fileArgs: string[];
 	/** Unknown flags (potentially extension flags) - map of flag name to value */
@@ -160,6 +161,8 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			result.gastown = true;
 		} else if (arg === "--hooks-config" && i + 1 < args.length) {
 			result.hooksConfig = args[++i];
+		} else if (arg === "--claude-settings-hooks") {
+			result.claudeSettingsHooks = true;
 		} else if (arg.startsWith("@")) {
 			result.fileArgs.push(arg.slice(1)); // Remove @ prefix
 		} else if (arg.startsWith("--") && extensionFlags) {
@@ -229,6 +232,7 @@ ${chalk.bold("Options:")}
   --offline                      Disable startup network operations (same as PI_OFFLINE=1)
   --gastown                      Enable Gastown compatibility mode
   --hooks-config <path>          Load hooks config from JSON file
+  --claude-settings-hooks        Enable .claude/settings*.json hook loading
   --help, -h                     Show this help
   --version, -v                  Show version number
 
@@ -313,6 +317,7 @@ ${chalk.bold("Environment Variables:")}
   PI_AI_ANTIGRAVITY_VERSION        - Override Antigravity User-Agent version (e.g., 1.23.0)
   PI_GASTOWN_MODE                  - Enable Gastown compatibility mode (set to 1)
   PI_HOOKS_JSON                    - Inline hooks config JSON (lower precedence than --hooks-config)
+  PI_ENABLE_CLAUDE_SETTINGS_HOOKS  - Enable .claude/settings*.json hook loading (set to 1)
 
 ${chalk.bold("Available Tools (default: read, bash, edit, write):")}
   read   - Read file contents

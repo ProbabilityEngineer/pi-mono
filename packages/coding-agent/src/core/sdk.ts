@@ -259,6 +259,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		: defaultActiveToolNames;
 
 	const hookConfigResolution = await resolveHooksConfig({
+		cwd,
 		hooksConfigPath: options.hooksConfigPath,
 		hooksJson: options.hooksJson,
 		gastownMode: options.gastownMode,
