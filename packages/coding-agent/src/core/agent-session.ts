@@ -2094,10 +2094,16 @@ export class AgentSession {
 		const activeToolsArray: AgentTool[] = [...activeBaseTools, ...activeExtensionTools];
 
 		if (this._extensionRunner) {
-			const wrappedActiveTools = wrapToolsWithExtensions(activeToolsArray, this._extensionRunner);
+			const wrappedActiveTools = wrapToolsWithExtensions(activeToolsArray, this._extensionRunner, {
+				hookRunner: this._hookRunner,
+				cwd: this._cwd,
+			});
 			this.agent.setTools(wrappedActiveTools as AgentTool[]);
 
-			const wrappedAllTools = wrapToolsWithExtensions(Array.from(toolRegistry.values()), this._extensionRunner);
+			const wrappedAllTools = wrapToolsWithExtensions(Array.from(toolRegistry.values()), this._extensionRunner, {
+				hookRunner: this._hookRunner,
+				cwd: this._cwd,
+			});
 			this._toolRegistry = new Map(wrappedAllTools.map((tool) => [tool.name, tool]));
 		} else {
 			this.agent.setTools(activeToolsArray);
