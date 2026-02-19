@@ -61,6 +61,12 @@ Capability signals describe which tooling paths are currently available so model
 - If `astGrep.available` is `false`, prompt guidance MUST NOT direct `ast-grep` usage.
 - If LSP is disabled, prompt guidance SHOULD avoid semantic-tool suggestions and fall back to standard file/tool workflows.
 
+### Availability-aware guidance examples
+- Prefer: "Use `ast-grep` for bulk structural edits when capability signals report `astGrep.available=true`."
+- Avoid: "Always use `ast-grep` for refactors."
+- Prefer: "If LSP is enabled, use it for semantic lookups and rename confidence checks."
+- Avoid: "Always call LSP before every edit."
+
 ## Validation checklist
 - Signal payload is deterministic across repeated startups with unchanged environment.
 - Missing `ast-grep` shows `available=false` without warnings in normal mode.
