@@ -6,9 +6,7 @@ export function buildInvalidHookConfigWarning(resolution: HookConfigResolution):
 	return `Warning: invalid hook config from ${source} (${reason}). Hooks are disabled for this session.`;
 }
 
-export function buildInvalidHookConfigWarningDetails(
-	resolution: HookConfigResolution,
-): Record<string, unknown> {
+export function buildInvalidHookConfigWarningDetails(resolution: HookConfigResolution): Record<string, unknown> {
 	return {
 		type: "invalid_hook_config",
 		source: resolution.invalidRuntimeSourceName ?? "runtime",
