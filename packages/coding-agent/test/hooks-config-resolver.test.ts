@@ -159,4 +159,19 @@ describe("resolveHooksConfig", () => {
 		expect(result.invalidRuntimeConfig).toBe(true);
 		expect(result.hooksDisabledForSession).toBe(true);
 	});
+
+	test("disables hooks when cli config path is missing", async () => {
+		const dir = createTempDir();
+		const missingPath = join(dir, "missing-hooks.json");
+		const result = await resolveHooksConfig({
+			hooksConfigPath: missingPath,
+			gastownMode: true,
+		});
+
+		expect(result.sourceName).toBe("cli");
+		expect(result.config).toBeUndefined();
+		expect(result.invalidRuntimeConfig).toBe(true);
+		expect(result.hooksDisabledForSession).toBe(true);
+		expect(result.errors[0]).toContain("[cli]");
+	});
 });
