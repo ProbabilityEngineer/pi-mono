@@ -15,7 +15,7 @@ Improve `/model` model discoverability and reduce noise by:
 - New `/freemodel` command in interactive mode.
 - Model list filtering behavior wired to command mode.
 - Tests for grouping, filtering, and persistence.
-- Documentation updates for `/settings` and model selection behavior.
+- Documentation updates for model selection behavior.
 
 ### Out of Scope
 
@@ -80,7 +80,7 @@ Deliverables:
 
 ## Epic B: Add `/freemodel` filtered selector
 
-Branch: `epic/settings-model-free-only-filter`
+Branch: `epic/737-1-freemodel-extension-ui`
 
 Deliverables:
 

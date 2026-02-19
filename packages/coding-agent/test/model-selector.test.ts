@@ -93,7 +93,7 @@ describe("ModelSelectorComponent", () => {
 		expect(providers).toEqual(["anthropic", "anthropic", "openrouter", "openrouter"]);
 	});
 
-	it('filters /model list to ids containing "free" when setting is enabled', async () => {
+	it('filters /freemodel list to ids containing "free"', async () => {
 		const models = [
 			makeModel("openrouter", "qwen/qwen3-coder"),
 			makeModel("openrouter", "minimax-m2.5-free"),
