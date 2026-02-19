@@ -70,6 +70,7 @@ import {
 	wrapRegisteredTools,
 	wrapToolsWithExtensions,
 } from "./extensions/index.js";
+import { HookRunner, type HooksConfigMap } from "./hooks/index.js";
 import type { BashExecutionMessage, CustomMessage } from "./messages.js";
 import type { ModelRegistry } from "./model-registry.js";
 import { expandPromptTemplate, type PromptTemplate } from "./prompt-templates.js";
@@ -149,6 +150,8 @@ export interface AgentSessionConfig {
 	baseToolsOverride?: Record<string, AgentTool>;
 	/** Mutable ref used by Agent to access the current ExtensionRunner */
 	extensionRunnerRef?: { current?: ExtensionRunner };
+	/** Optional hook configuration used by the internal HookRunner. */
+	hooksConfig?: HooksConfigMap;
 }
 
 export interface ExtensionBindings {
@@ -276,6 +279,9 @@ export class AgentSession {
 
 	// Base system prompt (without extension appends) - used to apply fresh appends each turn
 	private _baseSystemPrompt = "";
+	private _hookRunner: HookRunner | undefined = undefined;
+	private _hookSystemPromptContext: string | undefined = undefined;
+	private _hooksConfig: HooksConfigMap | undefined = undefined;
 
 	constructor(config: AgentSessionConfig) {
 		this.agent = config.agent;
@@ -289,6 +295,7 @@ export class AgentSession {
 		this._extensionRunnerRef = config.extensionRunnerRef;
 		this._initialActiveToolNames = config.initialActiveToolNames;
 		this._baseToolsOverride = config.baseToolsOverride;
+		this._hooksConfig = config.hooksConfig;
 		this._languageEncounterCoordinator = createLanguageEncounterCoordinator(this._cwd, this.settingsManager);
 
 		// Always subscribe to agent events for internal handling
@@ -299,6 +306,32 @@ export class AgentSession {
 			activeToolNames: this._initialActiveToolNames,
 			includeAllExtensionTools: true,
 		});
+	}
+
+	private _composeBaseSystemPrompt(): string {
+		if (!this._hookSystemPromptContext) {
+			return this._baseSystemPrompt;
+		}
+		return `${this._baseSystemPrompt}\n\n${this._hookSystemPromptContext}`;
+	}
+
+	private _applyBaseSystemPrompt(): void {
+		this.agent.setSystemPrompt(this._composeBaseSystemPrompt());
+	}
+
+	private async _ensureSessionStartHookContext(): Promise<void> {
+		if (!this._hookRunner) {
+			return;
+		}
+		const result = await this._hookRunner.runSessionStart(this._cwd);
+		if (result.additionalContext !== undefined) {
+			this._hookSystemPromptContext = result.additionalContext;
+		}
+	}
+
+	private _resetSessionStartHookContext(): void {
+		this._hookRunner?.resetSessionStart();
+		this._hookSystemPromptContext = undefined;
 	}
 
 	/** Model registry for API key resolution and model discovery */
@@ -677,7 +710,7 @@ export class AgentSession {
 
 		// Rebuild base system prompt with new tool set
 		this._baseSystemPrompt = this._rebuildSystemPrompt(validToolNames);
-		this.agent.setSystemPrompt(this._baseSystemPrompt);
+		this._applyBaseSystemPrompt();
 	}
 
 	/** Whether compaction or branch summarization is currently running */
@@ -893,6 +926,7 @@ export class AgentSession {
 		if (lastAssistant) {
 			await this._checkCompaction(lastAssistant, false);
 		}
+		await this._ensureSessionStartHookContext();
 
 		// Build messages array (custom message if any, then user message)
 		const messages: AgentMessage[] = [];
@@ -919,7 +953,7 @@ export class AgentSession {
 			const result = await this._extensionRunner.emitBeforeAgentStart(
 				expandedText,
 				currentImages,
-				this._baseSystemPrompt,
+				this._composeBaseSystemPrompt(),
 			);
 			// Add all custom messages from extensions
 			if (result?.messages) {
@@ -939,7 +973,7 @@ export class AgentSession {
 				this.agent.setSystemPrompt(result.systemPrompt);
 			} else {
 				// Ensure we're using the base prompt (in case previous turn had modifications)
-				this.agent.setSystemPrompt(this._baseSystemPrompt);
+				this._applyBaseSystemPrompt();
 			}
 		}
 
@@ -1258,6 +1292,7 @@ export class AgentSession {
 		this.agent.reset();
 		this.sessionManager.newSession({ parentSession: options?.parentSession });
 		this.agent.sessionId = this.sessionManager.getSessionId();
+		this._resetSessionStartHookContext();
 		this._steeringMessages = [];
 		this._followUpMessages = [];
 		this._pendingNextTurnMessages = [];
@@ -1960,7 +1995,7 @@ export class AgentSession {
 
 		this._resourceLoader.extendResources(extensionPaths);
 		this._baseSystemPrompt = this._rebuildSystemPrompt(this.getActiveToolNames());
-		this.agent.setSystemPrompt(this._baseSystemPrompt);
+		this._applyBaseSystemPrompt();
 	}
 
 	private buildExtensionResourcePaths(entries: Array<{ path: string; extensionPath: string }>): Array<{
@@ -2234,6 +2269,7 @@ export class AgentSession {
 						this._modelRegistry,
 					)
 				: undefined;
+		this._hookRunner = this._hooksConfig ? new HookRunner({ config: this._hooksConfig }) : undefined;
 		if (this._extensionRunnerRef) {
 			this._extensionRunnerRef.current = this._extensionRunner;
 		}
@@ -2250,7 +2286,7 @@ export class AgentSession {
 		// Rebuild system prompt with active tool names
 		const systemPromptToolNames = baseActiveToolNames.filter((name) => this._baseToolRegistry.has(name));
 		this._baseSystemPrompt = this._rebuildSystemPrompt(systemPromptToolNames);
-		this.agent.setSystemPrompt(this._baseSystemPrompt);
+		this._applyBaseSystemPrompt();
 	}
 
 	private async _handleLanguageEncounter(path: string): Promise<string | undefined> {
@@ -2594,6 +2630,7 @@ export class AgentSession {
 		// Set new session
 		this.sessionManager.setSessionFile(sessionPath);
 		this.agent.sessionId = this.sessionManager.getSessionId();
+		this._resetSessionStartHookContext();
 
 		// Reload messages
 		const sessionContext = this.sessionManager.buildSessionContext();
@@ -2693,6 +2730,7 @@ export class AgentSession {
 			this.sessionManager.createBranchedSession(selectedEntry.parentId);
 		}
 		this.agent.sessionId = this.sessionManager.getSessionId();
+		this._resetSessionStartHookContext();
 
 		// Reload messages from entries (works for both file and in-memory mode)
 		const sessionContext = this.sessionManager.buildSessionContext();
