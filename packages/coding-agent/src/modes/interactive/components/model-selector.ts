@@ -21,6 +21,11 @@ interface ModelItem {
 	model: Model<any>;
 }
 
+interface ProviderSection {
+	provider: string;
+	items: ModelItem[];
+}
+
 interface ScopedModelItem {
 	model: Model<any>;
 	thinkingLevel: string;
@@ -178,15 +183,33 @@ export class ModelSelectorComponent extends Container implements Focusable {
 
 	private sortModels(models: ModelItem[]): ModelItem[] {
 		const sorted = [...models];
-		// Sort: current model first, then by provider
+		// Sort by provider, then keep current model first within that provider, then by id.
 		sorted.sort((a, b) => {
+			const providerCmp = a.provider.localeCompare(b.provider);
+			if (providerCmp !== 0) return providerCmp;
 			const aIsCurrent = modelsAreEqual(this.currentModel, a.model);
 			const bIsCurrent = modelsAreEqual(this.currentModel, b.model);
 			if (aIsCurrent && !bIsCurrent) return -1;
 			if (!aIsCurrent && bIsCurrent) return 1;
-			return a.provider.localeCompare(b.provider);
+			return a.id.localeCompare(b.id);
 		});
 		return sorted;
+	}
+
+	private buildProviderSections(items: ModelItem[]): ProviderSection[] {
+		const sections = new Map<string, ModelItem[]>();
+		for (const item of items) {
+			const existing = sections.get(item.provider);
+			if (existing) {
+				existing.push(item);
+			} else {
+				sections.set(item.provider, [item]);
+			}
+		}
+		return [...sections.entries()].map(([provider, groupedItems]) => ({
+			provider,
+			items: groupedItems,
+		}));
 	}
 
 	private getScopeText(): string {
@@ -227,30 +250,47 @@ export class ModelSelectorComponent extends Container implements Focusable {
 			Math.min(this.selectedIndex - Math.floor(maxVisible / 2), this.filteredModels.length - maxVisible),
 		);
 		const endIndex = Math.min(startIndex + maxVisible, this.filteredModels.length);
+		const providerCounts = new Map<string, number>();
+		for (const item of this.filteredModels) {
+			providerCounts.set(item.provider, (providerCounts.get(item.provider) ?? 0) + 1);
+		}
 
 		// Show visible slice of filtered models
-		for (let i = startIndex; i < endIndex; i++) {
-			const item = this.filteredModels[i];
-			if (!item) continue;
+		let renderedFirstProvider = false;
+		const visibleItems = this.filteredModels.slice(startIndex, endIndex);
+		const visibleSections = this.buildProviderSections(visibleItems);
+		for (const section of visibleSections) {
+			const count = providerCounts.get(section.provider) ?? section.items.length;
+			const sectionPrefix = renderedFirstProvider ? "  " : "";
+			this.listContainer.addChild(
+				new Text(theme.fg("muted", `${sectionPrefix}${section.provider} (${count})`), 0, 0),
+			);
+			renderedFirstProvider = true;
 
-			const isSelected = i === this.selectedIndex;
-			const isCurrent = modelsAreEqual(this.currentModel, item.model);
+			for (const item of section.items) {
+				const i = this.filteredModels.indexOf(item);
+				if (i < 0) continue;
+				if (!item) continue;
 
-			let line = "";
-			if (isSelected) {
-				const prefix = theme.fg("accent", "→ ");
-				const modelText = `${item.id}`;
-				const providerBadge = theme.fg("muted", `[${item.provider}]`);
-				const checkmark = isCurrent ? theme.fg("success", " ✓") : "";
-				line = `${prefix + theme.fg("accent", modelText)} ${providerBadge}${checkmark}`;
-			} else {
-				const modelText = `  ${item.id}`;
-				const providerBadge = theme.fg("muted", `[${item.provider}]`);
-				const checkmark = isCurrent ? theme.fg("success", " ✓") : "";
-				line = `${modelText} ${providerBadge}${checkmark}`;
+				const isSelected = i === this.selectedIndex;
+				const isCurrent = modelsAreEqual(this.currentModel, item.model);
+
+				let line = "";
+				if (isSelected) {
+					const prefix = theme.fg("accent", "→ ");
+					const modelText = `${item.id}`;
+					const providerBadge = theme.fg("muted", `[${item.provider}]`);
+					const checkmark = isCurrent ? theme.fg("success", " ✓") : "";
+					line = `${prefix + theme.fg("accent", modelText)} ${providerBadge}${checkmark}`;
+				} else {
+					const modelText = `  ${item.id}`;
+					const providerBadge = theme.fg("muted", `[${item.provider}]`);
+					const checkmark = isCurrent ? theme.fg("success", " ✓") : "";
+					line = `${modelText} ${providerBadge}${checkmark}`;
+				}
+
+				this.listContainer.addChild(new Text(line, 0, 0));
 			}
-
-			this.listContainer.addChild(new Text(line, 0, 0));
 		}
 
 		// Add scroll indicator if needed
