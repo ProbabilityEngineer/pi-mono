@@ -3,8 +3,14 @@
  */
 
 import type { AgentTool, AgentToolUpdateCallback } from "@mariozechner/pi-agent-core";
+import type { HookRunner } from "../hooks/index.js";
 import type { ExtensionRunner } from "./runner.js";
 import type { RegisteredTool, ToolCallEventResult } from "./types.js";
+
+export interface HookLifecycleOptions {
+	hookRunner?: HookRunner;
+	cwd: string;
+}
 
 /**
  * Wrap a RegisteredTool into an AgentTool.
@@ -35,7 +41,11 @@ export function wrapRegisteredTools(registeredTools: RegisteredTool[], runner: E
  * - Emits tool_call event before execution (can block)
  * - Emits tool_result event after execution (can modify result)
  */
-export function wrapToolWithExtensions<T>(tool: AgentTool<any, T>, runner: ExtensionRunner): AgentTool<any, T> {
+export function wrapToolWithExtensions<T>(
+	tool: AgentTool<any, T>,
+	runner: ExtensionRunner,
+	hookOptions?: HookLifecycleOptions,
+): AgentTool<any, T> {
 	return {
 		...tool,
 		execute: async (
@@ -44,6 +54,18 @@ export function wrapToolWithExtensions<T>(tool: AgentTool<any, T>, runner: Exten
 			signal?: AbortSignal,
 			onUpdate?: AgentToolUpdateCallback<T>,
 		) => {
+			if (hookOptions?.hookRunner) {
+				const hookResult = await hookOptions.hookRunner.runPreToolUse(
+					hookOptions.cwd,
+					tool.name,
+					params,
+					toolCallId,
+				);
+				if (hookResult.blocked) {
+					throw new Error(hookResult.reason ?? "Tool execution was blocked by a hook");
+				}
+			}
+
 			// Emit tool_call event - extensions can block execution
 			if (runner.hasHandlers("tool_call")) {
 				try {
@@ -69,6 +91,7 @@ export function wrapToolWithExtensions<T>(tool: AgentTool<any, T>, runner: Exten
 			// Execute the actual tool
 			try {
 				const result = await tool.execute(toolCallId, params, signal, onUpdate);
+				let nextResult = result;
 
 				// Emit tool_result event - extensions can modify the result
 				if (runner.hasHandlers("tool_result")) {
@@ -83,14 +106,18 @@ export function wrapToolWithExtensions<T>(tool: AgentTool<any, T>, runner: Exten
 					});
 
 					if (resultResult) {
-						return {
+						nextResult = {
 							content: resultResult.content ?? result.content,
 							details: (resultResult.details ?? result.details) as T,
 						};
 					}
 				}
 
-				return result;
+				if (hookOptions?.hookRunner) {
+					await hookOptions.hookRunner.runPostToolUse(hookOptions.cwd, tool.name, params, toolCallId);
+				}
+
+				return nextResult;
 			} catch (err) {
 				// Emit tool_result event for errors
 				if (runner.hasHandlers("tool_result")) {
@@ -104,6 +131,9 @@ export function wrapToolWithExtensions<T>(tool: AgentTool<any, T>, runner: Exten
 						isError: true,
 					});
 				}
+				if (hookOptions?.hookRunner) {
+					await hookOptions.hookRunner.runPostToolUse(hookOptions.cwd, tool.name, params, toolCallId);
+				}
 				throw err;
 			}
 		},
@@ -113,6 +143,10 @@ export function wrapToolWithExtensions<T>(tool: AgentTool<any, T>, runner: Exten
 /**
  * Wrap all tools with extension callbacks.
  */
-export function wrapToolsWithExtensions<T>(tools: AgentTool<any, T>[], runner: ExtensionRunner): AgentTool<any, T>[] {
-	return tools.map((tool) => wrapToolWithExtensions(tool, runner));
+export function wrapToolsWithExtensions<T>(
+	tools: AgentTool<any, T>[],
+	runner: ExtensionRunner,
+	hookOptions?: HookLifecycleOptions,
+): AgentTool<any, T>[] {
+	return tools.map((tool) => wrapToolWithExtensions(tool, runner, hookOptions));
 }
