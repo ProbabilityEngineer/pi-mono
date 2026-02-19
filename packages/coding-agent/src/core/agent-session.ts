@@ -322,6 +322,7 @@ export class AgentSession {
 		const result = await this._hookRunner.runSessionStart(this._cwd);
 		if (result.additionalContext !== undefined) {
 			this._hookSystemPromptContext = result.additionalContext;
+			this._applyBaseSystemPrompt();
 		}
 	}
 
@@ -1492,6 +1493,10 @@ export class AgentSession {
 				throw new Error("Nothing to compact (session too small)");
 			}
 
+			if (this._hookRunner) {
+				await this._hookRunner.runPreCompact(this._cwd);
+			}
+
 			let extensionCompaction: CompactionResult | undefined;
 			let fromExtension = false;
 
@@ -1674,6 +1679,10 @@ export class AgentSession {
 			if (!preparation) {
 				this._emit({ type: "auto_compaction_end", result: undefined, aborted: false, willRetry: false });
 				return;
+			}
+
+			if (this._hookRunner) {
+				await this._hookRunner.runPreCompact(this._cwd);
 			}
 
 			let extensionCompaction: CompactionResult | undefined;
