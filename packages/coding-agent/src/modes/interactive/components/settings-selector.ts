@@ -29,6 +29,7 @@ export interface SettingsConfig {
 	showImages: boolean;
 	autoResizeImages: boolean;
 	blockImages: boolean;
+	modelFreeOnlyFilter: boolean;
 	lspEnabled: boolean;
 	enableSkillCommands: boolean;
 	steeringMode: "all" | "one-at-a-time";
@@ -55,6 +56,7 @@ export interface SettingsCallbacks {
 	onShowImagesChange: (enabled: boolean) => void;
 	onAutoResizeImagesChange: (enabled: boolean) => void;
 	onBlockImagesChange: (blocked: boolean) => void;
+	onModelFreeOnlyFilterChange: (enabled: boolean) => void;
 	onLspEnabledChange: (enabled: boolean) => void;
 	onEnableSkillCommandsChange: (enabled: boolean) => void;
 	onSteeringModeChange: (mode: "all" | "one-at-a-time") => void;
@@ -307,6 +309,16 @@ export class SettingsSelectorComponent extends Container {
 		// Skill commands toggle (insert after block-images)
 		const blockImagesIndex = items.findIndex((item) => item.id === "block-images");
 		items.splice(blockImagesIndex + 1, 0, {
+			id: "model-free-only-filter",
+			label: 'Models: only "free"',
+			description: 'In /model, show only model IDs containing "free"',
+			currentValue: config.modelFreeOnlyFilter ? "true" : "false",
+			values: ["true", "false"],
+		});
+
+		// Skill commands toggle (insert after model-free-only-filter)
+		const freeOnlyIndex = items.findIndex((item) => item.id === "model-free-only-filter");
+		items.splice(freeOnlyIndex + 1, 0, {
 			id: "skill-commands",
 			label: "Skill commands",
 			description: "Register skills as /skill:name commands",
@@ -390,6 +402,9 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "block-images":
 						callbacks.onBlockImagesChange(newValue === "true");
+						break;
+					case "model-free-only-filter":
+						callbacks.onModelFreeOnlyFilterChange(newValue === "true");
 						break;
 					case "skill-commands":
 						callbacks.onEnableSkillCommandsChange(newValue === "true");

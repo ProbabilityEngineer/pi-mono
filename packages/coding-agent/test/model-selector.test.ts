@@ -42,6 +42,7 @@ describe("ModelSelectorComponent", () => {
 			getAvailable: vi.fn(async () => models),
 		};
 		const settingsManager = {
+			getModelFreeOnlyFilter: vi.fn(() => false),
 			setDefaultModelAndProvider: vi.fn(),
 		};
 		const selector = new ModelSelectorComponent(
@@ -75,6 +76,7 @@ describe("ModelSelectorComponent", () => {
 			getAvailable: vi.fn(async () => models),
 		};
 		const settingsManager = {
+			getModelFreeOnlyFilter: vi.fn(() => false),
 			setDefaultModelAndProvider: vi.fn(),
 		};
 		const selector = new ModelSelectorComponent(
@@ -91,5 +93,65 @@ describe("ModelSelectorComponent", () => {
 
 		const providers = (selector as any).filteredModels.map((item: { provider: string }) => item.provider);
 		expect(providers).toEqual(["anthropic", "anthropic", "openrouter", "openrouter"]);
+	});
+
+	it('filters /model list to ids containing "free" when setting is enabled', async () => {
+		const models = [
+			makeModel("openrouter", "qwen/qwen3-coder"),
+			makeModel("openrouter", "minimax-m2.5-free"),
+			makeModel("opencode", "deepseek-r1-free"),
+		];
+		const registry = {
+			refresh: vi.fn(),
+			getError: vi.fn(() => undefined),
+			getAvailable: vi.fn(async () => models),
+		};
+		const settingsManager = {
+			getModelFreeOnlyFilter: vi.fn(() => true),
+			setDefaultModelAndProvider: vi.fn(),
+		};
+		const selector = new ModelSelectorComponent(
+			makeTui(),
+			undefined,
+			settingsManager as never,
+			registry as never,
+			[],
+			() => {},
+			() => {},
+		);
+
+		await flushPromises();
+
+		const output = selector.render(120).join("\n");
+		expect(output).toContain("minimax-m2.5-free");
+		expect(output).toContain("deepseek-r1-free");
+		expect(output).not.toContain("qwen/qwen3-coder");
+	});
+
+	it("shows free-filter specific empty state when no models match", async () => {
+		const models = [makeModel("openrouter", "qwen/qwen3-coder")];
+		const registry = {
+			refresh: vi.fn(),
+			getError: vi.fn(() => undefined),
+			getAvailable: vi.fn(async () => models),
+		};
+		const settingsManager = {
+			getModelFreeOnlyFilter: vi.fn(() => true),
+			setDefaultModelAndProvider: vi.fn(),
+		};
+		const selector = new ModelSelectorComponent(
+			makeTui(),
+			undefined,
+			settingsManager as never,
+			registry as never,
+			[],
+			() => {},
+			() => {},
+		);
+
+		await flushPromises();
+
+		const output = selector.render(120).join("\n");
+		expect(output).toContain('Disable `Models: only "free"` in /settings');
 	});
 });
