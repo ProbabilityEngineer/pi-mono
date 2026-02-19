@@ -171,4 +171,29 @@ export class HookRunner {
 			invocations,
 		};
 	}
+
+	async runPostToolUseFailure(
+		cwd: string,
+		toolName: string,
+		toolInput: Record<string, unknown>,
+		toolUseId: string,
+		toolError?: string,
+	): Promise<HookPostToolUseResult> {
+		const invocations = await this.runEventHooks("PostToolUseFailure", cwd, {
+			hook_event_name: "PostToolUseFailure",
+			cwd,
+			tool_name: toolName,
+			tool_input: toolInput,
+			tool_use_id: toolUseId,
+			tool_error: toolError,
+		});
+		const outputs = invocations
+			.map((item) => normalizeOutput(item.stdout, item.stderr))
+			.filter((value): value is string => value !== undefined);
+
+		return {
+			additionalContext: outputs.length > 0 ? outputs.join("\n\n") : undefined,
+			invocations,
+		};
+	}
 }
