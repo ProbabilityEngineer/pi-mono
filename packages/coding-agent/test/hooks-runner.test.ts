@@ -101,4 +101,17 @@ describe("HookRunner", () => {
 		expect(result.additionalContext).toContain('"hook_event_name":"PostToolUseFailure"');
 		expect(result.additionalContext).toContain('"tool_error":"failed"');
 	});
+
+	test("redacts sensitive values in invocation logs", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "printf 'OPENAI_API_KEY=sk-testsecretvalue123456'" }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-5");
+
+		expect(result.blocked).toBe(false);
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].stdout).toContain("OPENAI_API_KEY=[REDACTED]");
+		expect(result.invocations[0].redacted).toBe(true);
+	});
 });

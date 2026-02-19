@@ -89,6 +89,7 @@ export interface HookInvocationRecord {
 	failed: boolean;
 	decision?: "allow" | "deny" | "ask";
 	reason?: string;
+	redacted?: boolean;
 }
 
 export interface HookSessionStartResult {
