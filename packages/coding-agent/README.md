@@ -440,6 +440,7 @@ PI_ENABLE_CLAUDE_SETTINGS_HOOKS=1 pi
 Troubleshooting:
 - If hooks appear inactive, start with `--verbose` and check for the invalid-config warning above.
 - Confirm the winning source in precedence order, then validate JSON shape and hook event names.
+- Validate config files quickly with `jq . ./hooks.json` before running pi.
 - If running with gastown defaults, verify `gt`/`bd` are on `PATH` (defaults are skipped when binaries are unavailable).
 
 ---
