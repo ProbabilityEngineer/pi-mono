@@ -1,5 +1,5 @@
 import { runHookCommand } from "./command-runner.js";
-import { redactSensitiveText } from "./logging-guardrails.js";
+import { redactSensitiveText, truncateHookLogText } from "./logging-guardrails.js";
 import type {
 	HookCommandPayload,
 	HookDefinition,
@@ -60,17 +60,24 @@ export class HookRunner {
 			const failed = result.code !== 0 && result.code !== 2;
 			const redactedStdout = redactSensitiveText(result.stdout);
 			const redactedStderr = redactSensitiveText(result.stderr);
+			const truncatedStdout = truncateHookLogText(redactedStdout.value);
+			const truncatedStderr = truncateHookLogText(redactedStderr.value);
+			const stdoutTruncated = result.stdoutTruncated || truncatedStdout.truncated;
+			const stderrTruncated = result.stderrTruncated || truncatedStderr.truncated;
 			invocations.push({
 				eventName,
 				command: hook.command,
 				configSourceName: this.configSourceName,
 				code: result.code,
 				durationMs,
-				stdout: redactedStdout.value,
-				stderr: redactedStderr.value,
+				stdout: truncatedStdout.value,
+				stderr: truncatedStderr.value,
 				timedOut: result.timedOut,
 				failed,
 				redacted: redactedStdout.redacted || redactedStderr.redacted,
+				stdoutTruncated,
+				stderrTruncated,
+				truncated: stdoutTruncated || stderrTruncated,
 			});
 		}
 
@@ -133,18 +140,25 @@ export class HookRunner {
 			const failed = result.code !== 0 && result.code !== 2;
 			const redactedStdout = redactSensitiveText(result.stdout);
 			const redactedStderr = redactSensitiveText(result.stderr);
+			const truncatedStdout = truncateHookLogText(redactedStdout.value);
+			const truncatedStderr = truncateHookLogText(redactedStderr.value);
+			const stdoutTruncated = result.stdoutTruncated || truncatedStdout.truncated;
+			const stderrTruncated = result.stderrTruncated || truncatedStderr.truncated;
 			const invocation: HookInvocationRecord = {
 				eventName: "PreToolUse",
 				command: hook.command,
 				configSourceName: this.configSourceName,
 				code: result.code,
 				durationMs,
-				stdout: redactedStdout.value,
-				stderr: redactedStderr.value,
+				stdout: truncatedStdout.value,
+				stderr: truncatedStderr.value,
 				timedOut: result.timedOut,
 				failed,
 				decision: "allow",
 				redacted: redactedStdout.redacted || redactedStderr.redacted,
+				stdoutTruncated,
+				stderrTruncated,
+				truncated: stdoutTruncated || stderrTruncated,
 			};
 			invocations.push(invocation);
 
