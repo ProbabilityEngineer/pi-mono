@@ -4,6 +4,16 @@
 Delta to v1. This document only describes additions and refinements.  
 All behavior defined in v1 remains unchanged unless explicitly noted.
 
+Implementation snapshot (as of 2026-02-19):
+- Completed:
+  - Runtime hook config ingestion + precedence
+  - Invalid runtime-config handling (disable hooks for session, no crash, no fallback to built-ins)
+  - Logging guardrails (redaction + truncation + deterministic fields)
+- Pending:
+  - Structured JSON decision parsing from hook stdout (`decision`, `reason`, `additionalContext`)
+  - `updatedInput` tool argument mutation
+  - Structured hook-context injection pipeline beyond current raw output fallback
+
 ## Purpose
 v1.1 introduces runtime configurability and structured hook decisions so pi-mono can accept hook configuration directly from Gastown (Option A) while maintaining the v1 fallback defaults.
 
@@ -31,6 +41,8 @@ pi-mono MUST support receiving hook configuration at runtime.
   - NOT execute built-in defaults for that session.
 - If no runtime config is present and gastown-mode is enabled, built-in defaults execute (v1 behavior).
 
+Status: DONE (2026-02-19)
+
 ---
 
 ### 2. Structured hook decision parsing
@@ -57,6 +69,8 @@ PreToolUse and PostToolUse hooks MAY return JSON on stdout.
 
 Exit code semantics from v1 remain valid (exit code 2 still blocks).
 
+Status: PENDING
+
 ---
 
 ### 3. Tool input mutation (`updatedInput`)
@@ -78,6 +92,8 @@ PreToolUse hooks MAY return:
   - tool name and tool call ID are immutable,
   - keys named `__proto__`, `prototype`, and `constructor` must be ignored.
 
+Status: PENDING
+
 ---
 
 ### 4. Improved context injection
@@ -91,6 +107,8 @@ Hook output should support structured injection instead of raw stdout concatenat
   - context is attached as a dedicated hook-context block,
   - delivery occurs on the next model prompt assembly,
   - multiple injections in one turn are concatenated in hook execution order.
+
+Status: PENDING
 
 ---
 
@@ -112,6 +130,10 @@ Guardrail defaults for v1.1:
 - stdout/stderr log capture is capped at 2000 characters each,
 - redaction does not emit extra warnings in normal mode,
 - verbose mode may include metadata flagging redaction/truncation (for diagnostics).
+
+Status: MOSTLY DONE (2026-02-19)
+- Implemented: config source, duration, exit code, decision/reason fields, strict redaction, 2000-char truncation, truncation/redaction metadata.
+- Deferred with Section 2: decision/reason derived from parsed JSON stdout.
 
 ---
 
@@ -135,14 +157,14 @@ Built-in defaults must still operate exactly as in v1 when gastown-mode is enabl
 
 ## Acceptance criteria
 
-- pi-mono runs with runtime hook config supplied via CLI flag.
-- PreToolUse JSON decision blocks tool execution correctly.
-- updatedInput modifies tool arguments.
-- additionalContext appears in model prompt context.
-- Built-in defaults do not run when runtime config present.
-- Existing v1 tests continue to pass.
-- Runtime config parse/validation failures disable hooks without crashing session.
-- Hook context injection order is deterministic for multiple hooks in one turn.
+- [x] pi-mono runs with runtime hook config supplied via CLI flag.
+- [ ] PreToolUse JSON decision blocks tool execution correctly.
+- [ ] updatedInput modifies tool arguments.
+- [ ] additionalContext appears in model prompt context.
+- [x] Built-in defaults do not run when runtime config present.
+- [x] Existing v1 tests continue to pass.
+- [x] Runtime config parse/validation failures disable hooks without crashing session.
+- [ ] Hook context injection order is deterministic for multiple hooks in one turn.
 
 ---
 
