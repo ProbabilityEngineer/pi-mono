@@ -3100,6 +3100,7 @@ export class InteractiveMode {
 					showImages: this.settingsManager.getShowImages(),
 					autoResizeImages: this.settingsManager.getImageAutoResize(),
 					blockImages: this.settingsManager.getBlockImages(),
+					modelFreeOnlyFilter: this.settingsManager.getModelFreeOnlyFilter(),
 					lspEnabled: this.settingsManager.getLspEnabled(),
 					enableSkillCommands: this.settingsManager.getEnableSkillCommands(),
 					steeringMode: this.session.steeringMode,
@@ -3148,6 +3149,10 @@ export class InteractiveMode {
 					},
 					onBlockImagesChange: (blocked) => {
 						this.settingsManager.setBlockImages(blocked);
+						rebuildSessionRuntime();
+					},
+					onModelFreeOnlyFilterChange: (enabled) => {
+						this.settingsManager.setModelFreeOnlyFilter(enabled);
 						rebuildSessionRuntime();
 					},
 					onLspEnabledChange: (enabled) => {
