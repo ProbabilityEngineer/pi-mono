@@ -11,6 +11,7 @@ describe("HookRunner", () => {
 		const first = await runner.runSessionStart(process.cwd());
 		expect(first.invocations).toHaveLength(1);
 		expect(first.additionalContext).toContain("hello");
+		expect(first.invocations[0].durationMs).toBeGreaterThanOrEqual(0);
 
 		const second = await runner.runSessionStart(process.cwd());
 		expect(second.invocations).toHaveLength(0);
@@ -42,6 +43,8 @@ describe("HookRunner", () => {
 
 		expect(result.blocked).toBe(true);
 		expect(result.reason).toContain("blocked");
+		expect(result.invocations[0].decision).toBe("deny");
+		expect(result.invocations[0].reason).toContain("blocked");
 	});
 
 	test("fails open for non-zero PreToolUse by default", async () => {
@@ -54,6 +57,7 @@ describe("HookRunner", () => {
 		expect(result.blocked).toBe(false);
 		expect(result.invocations).toHaveLength(1);
 		expect(result.invocations[0].failed).toBe(true);
+		expect(result.invocations[0].decision).toBe("allow");
 	});
 
 	test("blocks on non-zero PreToolUse when failOpen is false", async () => {
@@ -65,6 +69,18 @@ describe("HookRunner", () => {
 
 		expect(result.blocked).toBe(true);
 		expect(result.reason).toContain("hard fail");
+		expect(result.invocations[0].decision).toBe("deny");
+	});
+
+	test("attaches config source name to invocations", async () => {
+		const config: HooksConfigMap = {
+			SessionStart: [{ command: "printf 'hello'" }],
+		};
+		const runner = new HookRunner({ config, configSourceName: "env" });
+		const result = await runner.runSessionStart(process.cwd());
+
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].configSourceName).toBe("env");
 	});
 
 	test("runs PostToolUseFailure hooks and captures output", async () => {
@@ -84,5 +100,31 @@ describe("HookRunner", () => {
 		expect(result.invocations[0].eventName).toBe("PostToolUseFailure");
 		expect(result.additionalContext).toContain('"hook_event_name":"PostToolUseFailure"');
 		expect(result.additionalContext).toContain('"tool_error":"failed"');
+	});
+
+	test("redacts sensitive values in invocation logs", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "printf 'OPENAI_API_KEY=sk-testsecretvalue123456'" }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-5");
+
+		expect(result.blocked).toBe(false);
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].stdout).toContain("OPENAI_API_KEY=[REDACTED]");
+		expect(result.invocations[0].redacted).toBe(true);
+	});
+
+	test("truncates long invocation output for logs", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "python3 - <<'PY'\nprint('x' * 5000)\nPY" }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-6");
+
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].truncated).toBe(true);
+		expect(result.invocations[0].stdoutTruncated).toBe(true);
+		expect(result.invocations[0].stdout).toContain("...[truncated]");
 	});
 });
