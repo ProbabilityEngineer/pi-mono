@@ -105,6 +105,7 @@ export interface Settings {
 	edit?: EditSettings;
 	readHashLines?: boolean; // default: false - include LINE:HASH prefixes in read output
 	lsp?: LspSettings;
+	gastownMode?: boolean; // default: true - enable Gastown hook defaults when no higher-precedence hook config is set
 }
 
 /** Deep merge settings: project/overrides take precedence, nested objects merge recursively */
@@ -920,6 +921,16 @@ export class SettingsManager {
 
 	getLspEnabled(): boolean {
 		return this.settings.lsp?.enabled ?? true;
+	}
+
+	getGastownMode(): boolean {
+		return this.settings.gastownMode ?? true;
+	}
+
+	setGastownMode(enabled: boolean): void {
+		this.globalSettings.gastownMode = enabled;
+		this.markModified("gastownMode");
+		this.save();
 	}
 
 	setLspEnabled(enabled: boolean): void {

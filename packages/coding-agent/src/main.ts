@@ -424,7 +424,7 @@ function buildSessionOptions(
 ): { options: CreateAgentSessionOptions; cliThinkingFromModel: boolean } {
 	const options: CreateAgentSessionOptions = {};
 	let cliThinkingFromModel = false;
-	const gastownMode = parsed.gastown || process.env.PI_GASTOWN_MODE === "1";
+	const gastownMode = parsed.gastown || process.env.PI_GASTOWN_MODE === "1" || settingsManager.getGastownMode();
 	const claudeSettingsHooksMode = parsed.claudeSettingsHooks || process.env.PI_ENABLE_CLAUDE_SETTINGS_HOOKS === "1";
 
 	if (sessionManager) {

@@ -25,6 +25,7 @@ const THINKING_DESCRIPTIONS: Record<ThinkingLevel, string> = {
 export interface SettingsConfig {
 	autoCompact: boolean;
 	hashlineMode: boolean;
+	gastownMode: boolean;
 	showImages: boolean;
 	autoResizeImages: boolean;
 	blockImages: boolean;
@@ -50,6 +51,7 @@ export interface SettingsConfig {
 export interface SettingsCallbacks {
 	onAutoCompactChange: (enabled: boolean) => void;
 	onHashlineModeChange: (enabled: boolean) => void;
+	onGastownModeChange: (enabled: boolean) => void;
 	onShowImagesChange: (enabled: boolean) => void;
 	onAutoResizeImagesChange: (enabled: boolean) => void;
 	onBlockImagesChange: (blocked: boolean) => void;
@@ -158,6 +160,13 @@ export class SettingsSelectorComponent extends Container {
 				label: "Hashline mode",
 				description: "Use hashline anchors for line edits",
 				currentValue: config.hashlineMode ? "true" : "false",
+				values: ["true", "false"],
+			},
+			{
+				id: "gastown-mode",
+				label: "Gastown mode",
+				description: "Enable built-in Gastown-compatible hook defaults",
+				currentValue: config.gastownMode ? "true" : "false",
 				values: ["true", "false"],
 			},
 			{
@@ -369,6 +378,9 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "hashline-mode":
 						callbacks.onHashlineModeChange(newValue === "true");
+						break;
+					case "gastown-mode":
+						callbacks.onGastownModeChange(newValue === "true");
 						break;
 					case "show-images":
 						callbacks.onShowImagesChange(newValue === "true");
