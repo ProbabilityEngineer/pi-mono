@@ -424,6 +424,7 @@ function buildSessionOptions(
 ): { options: CreateAgentSessionOptions; cliThinkingFromModel: boolean } {
 	const options: CreateAgentSessionOptions = {};
 	let cliThinkingFromModel = false;
+	const gastownMode = parsed.gastown || process.env.PI_GASTOWN_MODE === "1";
 
 	if (sessionManager) {
 		options.sessionManager = sessionManager;
@@ -506,6 +507,16 @@ function buildSessionOptions(
 		}
 	} else if (parsed.tools) {
 		options.tools = parsed.tools.map((name) => allTools[name]);
+	}
+
+	if (parsed.hooksConfig) {
+		options.hooksConfigPath = parsed.hooksConfig;
+	}
+	if (process.env.PI_HOOKS_JSON) {
+		options.hooksJson = process.env.PI_HOOKS_JSON;
+	}
+	if (gastownMode) {
+		options.gastownMode = true;
 	}
 
 	return { options, cliThinkingFromModel };
