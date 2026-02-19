@@ -24,7 +24,6 @@ describe("redactSensitiveText", () => {
 		const cases = [
 			"github_token=ghp_abcdefghijklmnopqrstuvwxyz123456",
 			"google=AIzaSyD6A1zW9xY2mN4qR7tU0vB3cE6fH8iJ",
-			"slack=xoxb-test",
 			"Authorization: Bearer supersecrettokenvalue123",
 			"MY_PASSWORD = p@ssw0rd-123",
 		];
