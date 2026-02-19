@@ -66,4 +66,23 @@ describe("HookRunner", () => {
 		expect(result.blocked).toBe(true);
 		expect(result.reason).toContain("hard fail");
 	});
+
+	test("runs PostToolUseFailure hooks and captures output", async () => {
+		const config: HooksConfigMap = {
+			PostToolUseFailure: [{ command: "read payload; printf '%s' \"$payload\"" }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPostToolUseFailure(
+			process.cwd(),
+			"bash",
+			{ command: "exit 1" },
+			"tool-4",
+			"failed",
+		);
+
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].eventName).toBe("PostToolUseFailure");
+		expect(result.additionalContext).toContain('"hook_event_name":"PostToolUseFailure"');
+		expect(result.additionalContext).toContain('"tool_error":"failed"');
+	});
 });
