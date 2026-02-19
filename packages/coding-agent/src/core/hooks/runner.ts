@@ -165,14 +165,18 @@ export class HookRunner {
 			if (result.code === 2) {
 				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook";
 				const redactedReason = redactSensitiveText(reason);
+				const truncatedReason = truncateHookLogText(redactedReason.value);
 				invocation.decision = "deny";
-				invocation.reason = redactedReason.value;
+				invocation.reason = truncatedReason.value;
 				if (redactedReason.redacted) {
 					invocation.redacted = true;
 				}
+				if (truncatedReason.truncated) {
+					invocation.truncated = true;
+				}
 				return {
 					blocked: true,
-					reason: redactedReason.value,
+					reason: truncatedReason.value,
 					invocations,
 				};
 			}
@@ -180,14 +184,18 @@ export class HookRunner {
 			if (failed && hook.failOpen === false) {
 				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook failure";
 				const redactedReason = redactSensitiveText(reason);
+				const truncatedReason = truncateHookLogText(redactedReason.value);
 				invocation.decision = "deny";
-				invocation.reason = redactedReason.value;
+				invocation.reason = truncatedReason.value;
 				if (redactedReason.redacted) {
 					invocation.redacted = true;
 				}
+				if (truncatedReason.truncated) {
+					invocation.truncated = true;
+				}
 				return {
 					blocked: true,
-					reason: redactedReason.value,
+					reason: truncatedReason.value,
 					invocations,
 				};
 			}

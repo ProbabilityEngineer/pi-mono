@@ -127,4 +127,27 @@ describe("HookRunner", () => {
 		expect(result.invocations[0].stdoutTruncated).toBe(true);
 		expect(result.invocations[0].stdout).toContain("...[truncated]");
 	});
+
+	test("redacts and truncates deny reason used by verbose hook logs", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [
+				{
+					command:
+						"python3 - <<'PY'\nprint('OPENAI_API_KEY=sk-testsecretvalue123456 ' + 'x' * 5000)\nraise SystemExit(2)\nPY",
+				},
+			],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-7");
+
+		expect(result.blocked).toBe(true);
+		expect(result.reason).toContain("[REDACTED]");
+		expect(result.reason).toContain("...[truncated]");
+		expect(result.reason).not.toContain("sk-testsecretvalue123456");
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].decision).toBe("deny");
+		expect(result.invocations[0].redacted).toBe(true);
+		expect(result.invocations[0].truncated).toBe(true);
+		expect(result.invocations[0].stdoutTruncated).toBe(true);
+	});
 });
