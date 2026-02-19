@@ -275,6 +275,18 @@ Use for project instructions, conventions, common commands. All matching files a
 
 Replace the default system prompt with `.pi/SYSTEM.md` (project) or `~/.pi/agent/SYSTEM.md` (global). Append without replacing via `APPEND_SYSTEM.md`.
 
+### Tool Selection Guidance
+
+When shaping your system prompt/instructions for pi:
+
+- Use **LSP** for semantic tasks (definitions, references, rename safety, diagnostics).
+- Use **`ast-grep`** for large structural rewrites when available.
+- Use **pre-commit checks** as final enforcement, not as a replacement for in-loop tooling.
+
+Keep guidance availability-aware:
+- If `ast-grep` is not available on `PATH`, do not instruct the model to rely on it.
+- If LSP is disabled, prefer normal read/edit/grep/find workflows.
+
 ---
 
 ## Customization
