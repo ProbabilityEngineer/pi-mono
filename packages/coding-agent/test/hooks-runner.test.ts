@@ -32,4 +32,38 @@ describe("HookRunner", () => {
 		expect(result.additionalContext).toContain("a");
 		expect(result.additionalContext).toContain("b");
 	});
+
+	test("blocks PreToolUse on exit code 2", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "printf 'blocked'; exit 2" }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-1");
+
+		expect(result.blocked).toBe(true);
+		expect(result.reason).toContain("blocked");
+	});
+
+	test("fails open for non-zero PreToolUse by default", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "printf 'warn'; exit 1" }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-2");
+
+		expect(result.blocked).toBe(false);
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].failed).toBe(true);
+	});
+
+	test("blocks on non-zero PreToolUse when failOpen is false", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "printf 'hard fail'; exit 1", failOpen: false }],
+		};
+		const runner = new HookRunner({ config });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-3");
+
+		expect(result.blocked).toBe(true);
+		expect(result.reason).toContain("hard fail");
+	});
 });
