@@ -99,29 +99,54 @@ export class HookRunner {
 		toolInput: Record<string, unknown>,
 		toolUseId: string,
 	): Promise<HookPreToolUseResult> {
-		const invocations = await this.runEventHooks(
-			"PreToolUse",
-			cwd,
-			{
-				hook_event_name: "PreToolUse",
-				cwd,
-				tool_name: toolName,
-				tool_input: toolInput,
-				tool_use_id: toolUseId,
-			},
-			(hook) => !hook.matcher?.toolNames || hook.matcher.toolNames.includes(toolName),
-		);
+		const hooks = this.config.PreToolUse ?? [];
+		const invocations: HookInvocationRecord[] = [];
+		for (const hook of hooks) {
+			if (hook.matcher?.toolNames && !hook.matcher.toolNames.includes(toolName)) {
+				continue;
+			}
 
-		const blockedBy = invocations.find((item) => item.code === 2);
-		if (!blockedBy) {
-			return { blocked: false, invocations };
+			const result = await runHookCommand(hook.command, {
+				cwd,
+				payload: {
+					hook_event_name: "PreToolUse",
+					cwd,
+					tool_name: toolName,
+					tool_input: toolInput,
+					tool_use_id: toolUseId,
+				},
+				timeoutMs: hook.timeoutMs,
+			});
+			const failed = result.code !== 0 && result.code !== 2;
+			const invocation: HookInvocationRecord = {
+				eventName: "PreToolUse",
+				command: hook.command,
+				code: result.code,
+				stdout: result.stdout,
+				stderr: result.stderr,
+				timedOut: result.timedOut,
+				failed,
+			};
+			invocations.push(invocation);
+
+			if (result.code === 2) {
+				return {
+					blocked: true,
+					reason: normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook",
+					invocations,
+				};
+			}
+
+			if (failed && hook.failOpen === false) {
+				return {
+					blocked: true,
+					reason: normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook failure",
+					invocations,
+				};
+			}
 		}
 
-		return {
-			blocked: true,
-			reason: normalizeOutput(blockedBy.stdout, blockedBy.stderr) ?? "Tool call blocked by hook",
-			invocations,
-		};
+		return { blocked: false, invocations };
 	}
 
 	async runPostToolUse(
