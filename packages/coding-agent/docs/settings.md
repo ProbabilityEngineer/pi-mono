@@ -99,6 +99,7 @@ When a provider requests a retry delay longer than `maxDelayMs` (e.g., Google's 
 | `steeringMode` | string | `"one-at-a-time"` | How steering messages are sent: `"all"` or `"one-at-a-time"` |
 | `followUpMode` | string | `"one-at-a-time"` | How follow-up messages are sent: `"all"` or `"one-at-a-time"` |
 | `transport` | string | `"sse"` | Preferred transport for providers that support multiple transports: `"sse"`, `"websocket"`, or `"auto"` |
+| `gastownMode` | boolean | `true` | Enable Gastown-compatible built-in hook defaults |
 
 ### Terminal & Images
 

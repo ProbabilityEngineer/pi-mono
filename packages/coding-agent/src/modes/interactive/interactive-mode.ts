@@ -3033,6 +3033,7 @@ export class InteractiveMode {
 				{
 					autoCompact: this.session.autoCompactionEnabled,
 					hashlineMode: this.settingsManager.getEditMode() === "hashline",
+					gastownMode: this.settingsManager.getGastownMode(),
 					showImages: this.settingsManager.getShowImages(),
 					autoResizeImages: this.settingsManager.getImageAutoResize(),
 					blockImages: this.settingsManager.getBlockImages(),
@@ -3062,6 +3063,10 @@ export class InteractiveMode {
 					},
 					onHashlineModeChange: (enabled) => {
 						this.settingsManager.setEditMode(enabled ? "hashline" : "replace");
+						rebuildSessionRuntime();
+					},
+					onGastownModeChange: (enabled) => {
+						this.settingsManager.setGastownMode(enabled);
 						rebuildSessionRuntime();
 					},
 					onShowImagesChange: (enabled) => {
