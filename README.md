@@ -19,7 +19,11 @@
 
 Tools for building AI agents and managing LLM deployments.
 
+Claude Code-like hooks were implemented to facilitate use with [Steve Yegge's Gastown](https://github.com/steveyegge/gastown).
+
 Hashline and LSP support were backported from [Can Bölük's Oh-My-Pi](https://github.com/can1357/oh-my-pi). You can toggle both in `/settings` (Hashline mode and LSP).
+
+Testing and Issues welcome!
 
 ## Packages
 
