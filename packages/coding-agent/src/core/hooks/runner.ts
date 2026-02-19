@@ -1,5 +1,4 @@
 import { runHookCommand } from "./command-runner.js";
-import { redactSensitiveText, truncateHookLogText } from "./logging-guardrails.js";
 import type {
 	HookCommandPayload,
 	HookDefinition,
@@ -13,7 +12,6 @@ import type {
 
 interface HookRunnerOptions {
 	config: HooksConfigMap;
-	configSourceName?: string;
 }
 
 function normalizeOutput(stdout: string, stderr: string): string | undefined {
@@ -23,12 +21,10 @@ function normalizeOutput(stdout: string, stderr: string): string | undefined {
 
 export class HookRunner {
 	private readonly config: HooksConfigMap;
-	private readonly configSourceName: string | undefined;
 	private sessionStartCompleted = false;
 
 	constructor(options: HookRunnerOptions) {
 		this.config = options.config;
-		this.configSourceName = options.configSourceName;
 	}
 
 	resetSessionStart(): void {
@@ -49,35 +45,21 @@ export class HookRunner {
 				continue;
 			}
 
-			const startedAt = Date.now();
 			const result = await runHookCommand(hook.command, {
 				cwd,
 				payload,
 				timeoutMs: hook.timeoutMs,
 			});
-			const durationMs = Date.now() - startedAt;
 
 			const failed = result.code !== 0 && result.code !== 2;
-			const redactedStdout = redactSensitiveText(result.stdout);
-			const redactedStderr = redactSensitiveText(result.stderr);
-			const truncatedStdout = truncateHookLogText(redactedStdout.value);
-			const truncatedStderr = truncateHookLogText(redactedStderr.value);
-			const stdoutTruncated = result.stdoutTruncated || truncatedStdout.truncated;
-			const stderrTruncated = result.stderrTruncated || truncatedStderr.truncated;
 			invocations.push({
 				eventName,
 				command: hook.command,
-				configSourceName: this.configSourceName,
 				code: result.code,
-				durationMs,
-				stdout: truncatedStdout.value,
-				stderr: truncatedStderr.value,
+				stdout: result.stdout,
+				stderr: result.stderr,
 				timedOut: result.timedOut,
 				failed,
-				redacted: redactedStdout.redacted || redactedStderr.redacted,
-				stdoutTruncated,
-				stderrTruncated,
-				truncated: stdoutTruncated || stderrTruncated,
 			});
 		}
 
@@ -117,91 +99,29 @@ export class HookRunner {
 		toolInput: Record<string, unknown>,
 		toolUseId: string,
 	): Promise<HookPreToolUseResult> {
-		const hooks = this.config.PreToolUse ?? [];
-		const invocations: HookInvocationRecord[] = [];
-		for (const hook of hooks) {
-			if (hook.matcher?.toolNames && !hook.matcher.toolNames.includes(toolName)) {
-				continue;
-			}
-
-			const startedAt = Date.now();
-			const result = await runHookCommand(hook.command, {
+		const invocations = await this.runEventHooks(
+			"PreToolUse",
+			cwd,
+			{
+				hook_event_name: "PreToolUse",
 				cwd,
-				payload: {
-					hook_event_name: "PreToolUse",
-					cwd,
-					tool_name: toolName,
-					tool_input: toolInput,
-					tool_use_id: toolUseId,
-				},
-				timeoutMs: hook.timeoutMs,
-			});
-			const durationMs = Date.now() - startedAt;
-			const failed = result.code !== 0 && result.code !== 2;
-			const redactedStdout = redactSensitiveText(result.stdout);
-			const redactedStderr = redactSensitiveText(result.stderr);
-			const truncatedStdout = truncateHookLogText(redactedStdout.value);
-			const truncatedStderr = truncateHookLogText(redactedStderr.value);
-			const stdoutTruncated = result.stdoutTruncated || truncatedStdout.truncated;
-			const stderrTruncated = result.stderrTruncated || truncatedStderr.truncated;
-			const invocation: HookInvocationRecord = {
-				eventName: "PreToolUse",
-				command: hook.command,
-				configSourceName: this.configSourceName,
-				code: result.code,
-				durationMs,
-				stdout: truncatedStdout.value,
-				stderr: truncatedStderr.value,
-				timedOut: result.timedOut,
-				failed,
-				decision: "allow",
-				redacted: redactedStdout.redacted || redactedStderr.redacted,
-				stdoutTruncated,
-				stderrTruncated,
-				truncated: stdoutTruncated || stderrTruncated,
-			};
-			invocations.push(invocation);
+				tool_name: toolName,
+				tool_input: toolInput,
+				tool_use_id: toolUseId,
+			},
+			(hook) => !hook.matcher?.toolNames || hook.matcher.toolNames.includes(toolName),
+		);
 
-			if (result.code === 2) {
-				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook";
-				const redactedReason = redactSensitiveText(reason);
-				const truncatedReason = truncateHookLogText(redactedReason.value);
-				invocation.decision = "deny";
-				invocation.reason = truncatedReason.value;
-				if (redactedReason.redacted) {
-					invocation.redacted = true;
-				}
-				if (truncatedReason.truncated) {
-					invocation.truncated = true;
-				}
-				return {
-					blocked: true,
-					reason: truncatedReason.value,
-					invocations,
-				};
-			}
-
-			if (failed && hook.failOpen === false) {
-				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook failure";
-				const redactedReason = redactSensitiveText(reason);
-				const truncatedReason = truncateHookLogText(redactedReason.value);
-				invocation.decision = "deny";
-				invocation.reason = truncatedReason.value;
-				if (redactedReason.redacted) {
-					invocation.redacted = true;
-				}
-				if (truncatedReason.truncated) {
-					invocation.truncated = true;
-				}
-				return {
-					blocked: true,
-					reason: truncatedReason.value,
-					invocations,
-				};
-			}
+		const blockedBy = invocations.find((item) => item.code === 2);
+		if (!blockedBy) {
+			return { blocked: false, invocations };
 		}
 
-		return { blocked: false, invocations };
+		return {
+			blocked: true,
+			reason: normalizeOutput(blockedBy.stdout, blockedBy.stderr) ?? "Tool call blocked by hook",
+			invocations,
+		};
 	}
 
 	async runPostToolUse(
@@ -216,31 +136,6 @@ export class HookRunner {
 			tool_name: toolName,
 			tool_input: toolInput,
 			tool_use_id: toolUseId,
-		});
-		const outputs = invocations
-			.map((item) => normalizeOutput(item.stdout, item.stderr))
-			.filter((value): value is string => value !== undefined);
-
-		return {
-			additionalContext: outputs.length > 0 ? outputs.join("\n\n") : undefined,
-			invocations,
-		};
-	}
-
-	async runPostToolUseFailure(
-		cwd: string,
-		toolName: string,
-		toolInput: Record<string, unknown>,
-		toolUseId: string,
-		toolError?: string,
-	): Promise<HookPostToolUseResult> {
-		const invocations = await this.runEventHooks("PostToolUseFailure", cwd, {
-			hook_event_name: "PostToolUseFailure",
-			cwd,
-			tool_name: toolName,
-			tool_input: toolInput,
-			tool_use_id: toolUseId,
-			tool_error: toolError,
 		});
 		const outputs = invocations
 			.map((item) => normalizeOutput(item.stdout, item.stderr))
