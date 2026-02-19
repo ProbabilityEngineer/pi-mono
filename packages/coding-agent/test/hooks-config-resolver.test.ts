@@ -77,7 +77,7 @@ describe("resolveHooksConfig", () => {
 		expect(result.invalidRuntimeConfig).toBe(true);
 		expect(result.hooksDisabledForSession).toBe(true);
 		expect(result.invalidRuntimeSourceName).toBe("cli");
-		expect(result.invalidRuntimeReason).toBeTruthy();
+		expect(result.invalidRuntimeReason).toBe("invalid JSON");
 		expect(result.diagnostics).toEqual([
 			expect.objectContaining({
 				sourceName: "cli",
@@ -172,6 +172,7 @@ describe("resolveHooksConfig", () => {
 		expect(result.config).toBeUndefined();
 		expect(result.invalidRuntimeConfig).toBe(true);
 		expect(result.hooksDisabledForSession).toBe(true);
+		expect(result.invalidRuntimeReason).toBe("hooks config file not found");
 		expect(result.errors[0]).toContain("[cli]");
 	});
 });
