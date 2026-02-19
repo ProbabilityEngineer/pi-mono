@@ -227,6 +227,18 @@ describe("parseArgs", () => {
 		});
 	});
 
+	describe("hooks and gastown flags", () => {
+		test("parses --gastown flag", () => {
+			const result = parseArgs(["--gastown"]);
+			expect(result.gastown).toBe(true);
+		});
+
+		test("parses --hooks-config", () => {
+			const result = parseArgs(["--hooks-config", "./hooks.json"]);
+			expect(result.hooksConfig).toBe("./hooks.json");
+		});
+	});
+
 	describe("--no-tools flag", () => {
 		test("parses --no-tools flag", () => {
 			const result = parseArgs(["--no-tools"]);
