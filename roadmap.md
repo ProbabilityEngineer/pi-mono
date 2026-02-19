@@ -7,11 +7,22 @@ Items here are exploratory and NOT implementation requirements.
 
 ## Near-term (post v1.1)
 
-- Optional `.claude/settings*.json` compatibility layer
-- PostToolUseFailure event support
+- Hook decision UX hardening (`ask` policy behavior once permission UI exists)
+- Hook context visibility controls (user-facing inspection/toggle)
 - Improved matcher support (tool name + simple patterns)
 - Config validation tooling
 - Better error surfacing for hook failures
+
+### Active execution plan (beads)
+
+- `pi-mono-1km`: Hook runtime-config invalid behavior + user warning
+- `pi-mono-15s`: Hook execution logging guardrails
+- `pi-mono-b4c`: Validation, tests, and docs rollout
+
+### Already implemented (moved out of roadmap)
+
+- Optional `.claude/settings*.json` compatibility layer (feature-flagged)
+- `PostToolUseFailure` event support
 
 ---
 
@@ -77,6 +88,7 @@ Future versions should maintain:
 - backward-compatible config model
 - minimal startup overhead
 - no dependency on Claude Code binaries
+- deterministic hook-context injection ordering
 
 ---
 
