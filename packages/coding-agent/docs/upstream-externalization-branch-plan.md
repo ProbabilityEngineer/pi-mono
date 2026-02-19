@@ -37,3 +37,7 @@ Layer 2 (parallel)
 - Slice D: 737.3 doc/process cleanup commits on `epic/737-3-docs-process-separation`
 - Slice E: upstream sync checkpoint commits on `epic/737-4-upstream-sync-checkpoint`
 - Slice F/G/H: isolated core patch stacks on 737.5/737.6/737.7 branches
+
+## Checkpoint Output
+
+- `docs/ops/upstream-sync-checkpoint-2026-02-19.md`
