@@ -50,6 +50,22 @@ function createTool(execute: AgentTool["execute"]): AgentTool {
 }
 
 describe("hook lifecycle in wrapToolWithExtensions", () => {
+	test("runs hooks even when no extension runner is present", async () => {
+		const hookRunner = new HookRunnerStub();
+		const tool = createTool(async () => {
+			const result: AgentToolResult<unknown> = { content: [{ type: "text", text: "ok" }], details: {} };
+			return result;
+		});
+
+		const wrapped = wrapToolWithExtensions(tool, undefined, {
+			hookRunner: hookRunner as unknown as HookRunner,
+			cwd: process.cwd(),
+		});
+
+		await wrapped.execute("tool-use-no-runner", {}, undefined, undefined);
+		expect(hookRunner.calls).toEqual(["pre", "post"]);
+	});
+
 	test("runs pre and post hooks around tool execution", async () => {
 		const hookRunner = new HookRunnerStub();
 		const order: string[] = [];

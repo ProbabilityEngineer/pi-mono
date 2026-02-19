@@ -44,7 +44,7 @@ export function wrapRegisteredTools(registeredTools: RegisteredTool[], runner: E
  */
 export function wrapToolWithExtensions<T>(
 	tool: AgentTool<any, T>,
-	runner: ExtensionRunner,
+	runner: ExtensionRunner | undefined,
 	hookOptions?: HookLifecycleOptions,
 ): AgentTool<any, T> {
 	return {
@@ -68,7 +68,7 @@ export function wrapToolWithExtensions<T>(
 			}
 
 			// Emit tool_call event - extensions can block execution
-			if (runner.hasHandlers("tool_call")) {
+			if (runner?.hasHandlers("tool_call")) {
 				try {
 					const callResult = (await runner.emitToolCall({
 						type: "tool_call",
@@ -95,7 +95,7 @@ export function wrapToolWithExtensions<T>(
 				let nextResult = result;
 
 				// Emit tool_result event - extensions can modify the result
-				if (runner.hasHandlers("tool_result")) {
+				if (runner?.hasHandlers("tool_result")) {
 					const resultResult = await runner.emitToolResult({
 						type: "tool_result",
 						toolName: tool.name,
@@ -129,7 +129,7 @@ export function wrapToolWithExtensions<T>(
 				return nextResult;
 			} catch (err) {
 				// Emit tool_result event for errors
-				if (runner.hasHandlers("tool_result")) {
+				if (runner?.hasHandlers("tool_result")) {
 					await runner.emitToolResult({
 						type: "tool_result",
 						toolName: tool.name,
@@ -162,7 +162,7 @@ export function wrapToolWithExtensions<T>(
  */
 export function wrapToolsWithExtensions<T>(
 	tools: AgentTool<any, T>[],
-	runner: ExtensionRunner,
+	runner: ExtensionRunner | undefined,
 	hookOptions?: HookLifecycleOptions,
 ): AgentTool<any, T>[] {
 	return tools.map((tool) => wrapToolWithExtensions(tool, runner, hookOptions));
