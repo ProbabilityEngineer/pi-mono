@@ -17,7 +17,7 @@ import { APP_NAME, getAgentDir, getModelsPath, VERSION } from "./config.js";
 import { AuthStorage } from "./core/auth-storage.js";
 import { exportFromFile } from "./core/export-html/index.js";
 import type { LoadExtensionsResult } from "./core/extensions/index.js";
-import { buildInvalidHookConfigWarning } from "./core/hooks/startup-warning.js";
+import { buildInvalidHookConfigWarning, buildInvalidHookConfigWarningDetails } from "./core/hooks/startup-warning.js";
 import { KeybindingsManager } from "./core/keybindings.js";
 import { ModelRegistry } from "./core/model-registry.js";
 import { resolveCliModel, resolveModelScope, type ScopedModel } from "./core/model-resolver.js";
@@ -777,6 +777,9 @@ export async function main(args: string[]) {
 
 	if (hookConfigResolution.invalidRuntimeConfig) {
 		console.error(chalk.yellow(buildInvalidHookConfigWarning(hookConfigResolution)));
+		if (parsed.verbose) {
+			console.error(chalk.dim(JSON.stringify(buildInvalidHookConfigWarningDetails(hookConfigResolution))));
+		}
 	}
 
 	if (!isInteractive && !session.model) {
