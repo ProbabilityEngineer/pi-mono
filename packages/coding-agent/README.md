@@ -626,6 +626,15 @@ cd packages/coding-agent
 npx tsx ../../node_modules/vitest/dist/cli.js --run test/hashline-concurrency-stress.test.ts
 ```
 
+Live LSP validation matrix (requires installed language servers):
+
+```bash
+cd packages/coding-agent
+PI_LSP_LIVE=1 npx tsx ../../node_modules/vitest/dist/cli.js --run test/lsp-live-matrix.test.ts
+```
+
+This matrix validates runtime server selection across multiple languages and verifies intelligence vs linter role routing when both server roles are available.
+
 ---
 
 ## License
