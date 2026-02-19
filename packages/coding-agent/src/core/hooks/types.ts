@@ -22,6 +22,7 @@ export interface HookMatcher {
 }
 
 export interface HookResolutionInput {
+	cwd?: string;
 	hooksConfigPath?: string;
 	hooksJson?: string;
 	gastownMode?: boolean;
