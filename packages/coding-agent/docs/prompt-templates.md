@@ -65,3 +65,13 @@ Usage: `/component Button "onClick handler" "disabled support"`
 
 - Template discovery in `prompts/` is non-recursive.
 - If you want templates in subdirectories, add them explicitly via `prompts` settings or a package manifest.
+
+## Built-in Policy Template
+
+Pi ships a capability-aware policy template at `prompts/capability-aware-coding.md`.
+
+- Invoke it with `/capability-aware-coding`.
+- It standardizes capability checks for:
+  - `ast-grep`: `available|unavailable`
+  - `lsp`: `enabled|disabled`
+  - per-language LSP server: `installed|missing|auto-installable`
