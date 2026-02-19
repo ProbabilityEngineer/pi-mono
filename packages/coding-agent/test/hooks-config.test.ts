@@ -7,6 +7,7 @@ describe("parseHooksConfig", () => {
 			SessionStart: [{ command: "echo session" }],
 			PreToolUse: [{ command: "echo pre", matcher: { toolNames: ["bash", "read"] } }],
 			PostToolUse: [{ command: "echo post", timeoutMs: 1200 }],
+			PostToolUseFailure: [{ command: "echo postfail" }],
 			PreCompact: [{ command: "echo compact", failOpen: false }],
 		};
 
@@ -14,6 +15,7 @@ describe("parseHooksConfig", () => {
 		expect(Object.keys(config).sort()).toEqual([...HOOK_EVENT_NAMES].sort());
 		expect(config.PreToolUse?.[0].matcher?.toolNames).toEqual(["bash", "read"]);
 		expect(config.PostToolUse?.[0].timeoutMs).toBe(1200);
+		expect(config.PostToolUseFailure?.[0].command).toBe("echo postfail");
 		expect(config.PreCompact?.[0].failOpen).toBe(false);
 	});
 

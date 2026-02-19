@@ -1,4 +1,10 @@
-export const HOOK_EVENT_NAMES = ["SessionStart", "PreToolUse", "PostToolUse", "PreCompact"] as const;
+export const HOOK_EVENT_NAMES = [
+	"SessionStart",
+	"PreToolUse",
+	"PostToolUse",
+	"PostToolUseFailure",
+	"PreCompact",
+] as const;
 
 export type HookEventName = (typeof HOOK_EVENT_NAMES)[number];
 
@@ -39,6 +45,7 @@ export interface HookCommandPayload {
 	tool_name?: string;
 	tool_input?: Record<string, unknown>;
 	tool_use_id?: string;
+	tool_error?: string;
 }
 
 export interface HookCommandRunOptions {
