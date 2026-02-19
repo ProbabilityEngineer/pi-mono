@@ -34,10 +34,21 @@ export interface HookConfigSource {
 	resolve(input: HookResolutionInput): Promise<HooksConfigMap | undefined>;
 }
 
+export interface HookConfigDiagnostic {
+	sourceName: string;
+	message: string;
+	isRuntimeSource: boolean;
+}
+
 export interface HookConfigResolution {
 	config: HooksConfigMap | undefined;
 	sourceName: string | undefined;
 	errors: string[];
+	diagnostics: HookConfigDiagnostic[];
+	invalidRuntimeConfig: boolean;
+	invalidRuntimeSourceName?: string;
+	invalidRuntimeReason?: string;
+	hooksDisabledForSession: boolean;
 }
 
 export interface HookCommandPayload {

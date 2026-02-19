@@ -721,7 +721,15 @@ export async function main(args: string[]) {
 		authStorage.setRuntimeApiKey(sessionOptions.model.provider, parsed.apiKey);
 	}
 
-	const { session, modelFallbackMessage } = await createAgentSession(sessionOptions);
+	const { session, modelFallbackMessage, hookConfigResolution } = await createAgentSession(sessionOptions);
+
+	if (hookConfigResolution.invalidRuntimeConfig) {
+		const source = hookConfigResolution.invalidRuntimeSourceName ?? "runtime";
+		const reason = hookConfigResolution.invalidRuntimeReason ?? "invalid hook config";
+		console.error(
+			chalk.yellow(`Warning: invalid hook config from ${source} (${reason}). Hooks are disabled for this session.`),
+		);
+	}
 
 	if (!isInteractive && !session.model) {
 		console.error(chalk.red("No models available."));
