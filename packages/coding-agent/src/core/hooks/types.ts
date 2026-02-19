@@ -57,3 +57,29 @@ export interface HookCommandRunResult {
 	stderrTruncated: boolean;
 	timedOut: boolean;
 }
+
+export interface HookInvocationRecord {
+	eventName: HookEventName;
+	command: string;
+	code: number;
+	stdout: string;
+	stderr: string;
+	timedOut: boolean;
+	failed: boolean;
+}
+
+export interface HookSessionStartResult {
+	additionalContext?: string;
+	invocations: HookInvocationRecord[];
+}
+
+export interface HookPreToolUseResult {
+	blocked: boolean;
+	reason?: string;
+	invocations: HookInvocationRecord[];
+}
+
+export interface HookPostToolUseResult {
+	additionalContext?: string;
+	invocations: HookInvocationRecord[];
+}

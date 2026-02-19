@@ -12,6 +12,7 @@ export {
 	type ResolveHooksConfigOptions,
 	resolveHooksConfig,
 } from "./config-resolver.js";
+export { HookRunner } from "./runner.js";
 export type {
 	HookCommandPayload,
 	HookCommandRunOptions,
@@ -20,8 +21,12 @@ export type {
 	HookConfigSource,
 	HookDefinition,
 	HookEventName,
+	HookInvocationRecord,
 	HookMatcher,
+	HookPostToolUseResult,
+	HookPreToolUseResult,
 	HookResolutionInput,
+	HookSessionStartResult,
 	HooksConfigMap,
 } from "./types.js";
 export { HOOK_EVENT_NAMES } from "./types.js";
