@@ -7,17 +7,22 @@ Items here are exploratory and NOT implementation requirements.
 
 ## Near-term (post v1.1)
 
+- Complete remaining v1.1 deltas:
+  - structured JSON decision parsing from hook stdout
+  - `updatedInput` mutation for PreToolUse
+  - deterministic structured hook-context injection flow
 - Hook decision UX hardening (`ask` policy behavior once permission UI exists)
 - Hook context visibility controls (user-facing inspection/toggle)
 - Improved matcher support (tool name + simple patterns)
 - Config validation tooling
 - Better error surfacing for hook failures
 
-### Active execution plan (beads)
+### Recently completed (beads, 2026-02-19)
 
 - `pi-mono-1km`: Hook runtime-config invalid behavior + user warning
 - `pi-mono-15s`: Hook execution logging guardrails
 - `pi-mono-b4c`: Validation, tests, and docs rollout
+- follow-up polish slices for `pi-mono-1km.*` and `pi-mono-15s.*`
 
 ### Already implemented (moved out of roadmap)
 
