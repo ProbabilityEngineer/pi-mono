@@ -150,4 +150,30 @@ describe("HookRunner", () => {
 		expect(result.invocations[0].truncated).toBe(true);
 		expect(result.invocations[0].stdoutTruncated).toBe(true);
 	});
+
+	test("emits deterministic invocation field ordering", async () => {
+		const config: HooksConfigMap = {
+			PreToolUse: [{ command: "printf 'ok'" }],
+		};
+		const runner = new HookRunner({ config, configSourceName: "env" });
+		const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-8");
+
+		expect(result.invocations).toHaveLength(1);
+		expect(Object.keys(result.invocations[0])).toEqual([
+			"eventName",
+			"command",
+			"configSourceName",
+			"code",
+			"durationMs",
+			"stdout",
+			"stderr",
+			"timedOut",
+			"failed",
+			"decision",
+			"redacted",
+			"stdoutTruncated",
+			"stderrTruncated",
+			"truncated",
+		]);
+	});
 });
