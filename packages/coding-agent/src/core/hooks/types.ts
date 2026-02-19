@@ -80,11 +80,15 @@ export interface HookCommandRunResult {
 export interface HookInvocationRecord {
 	eventName: HookEventName;
 	command: string;
+	configSourceName?: string;
 	code: number;
+	durationMs: number;
 	stdout: string;
 	stderr: string;
 	timedOut: boolean;
 	failed: boolean;
+	decision?: "allow" | "deny" | "ask";
+	reason?: string;
 }
 
 export interface HookSessionStartResult {

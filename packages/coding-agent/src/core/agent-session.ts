@@ -152,6 +152,8 @@ export interface AgentSessionConfig {
 	extensionRunnerRef?: { current?: ExtensionRunner };
 	/** Optional hook configuration used by the internal HookRunner. */
 	hooksConfig?: HooksConfigMap;
+	/** Source name for hooks config (cli/env/claude_settings/gastown_builtin). */
+	hooksConfigSourceName?: string;
 }
 
 export interface ExtensionBindings {
@@ -282,6 +284,7 @@ export class AgentSession {
 	private _hookRunner: HookRunner | undefined = undefined;
 	private _hookSystemPromptContext: string | undefined = undefined;
 	private _hooksConfig: HooksConfigMap | undefined = undefined;
+	private _hooksConfigSourceName: string | undefined = undefined;
 
 	constructor(config: AgentSessionConfig) {
 		this.agent = config.agent;
@@ -296,6 +299,7 @@ export class AgentSession {
 		this._initialActiveToolNames = config.initialActiveToolNames;
 		this._baseToolsOverride = config.baseToolsOverride;
 		this._hooksConfig = config.hooksConfig;
+		this._hooksConfigSourceName = config.hooksConfigSourceName;
 		this._languageEncounterCoordinator = createLanguageEncounterCoordinator(this._cwd, this.settingsManager);
 
 		// Always subscribe to agent events for internal handling
@@ -2292,7 +2296,12 @@ export class AgentSession {
 						this._modelRegistry,
 					)
 				: undefined;
-		this._hookRunner = this._hooksConfig ? new HookRunner({ config: this._hooksConfig }) : undefined;
+		this._hookRunner = this._hooksConfig
+			? new HookRunner({
+					config: this._hooksConfig,
+					configSourceName: this._hooksConfigSourceName,
+				})
+			: undefined;
 		if (this._extensionRunnerRef) {
 			this._extensionRunnerRef.current = this._extensionRunner;
 		}

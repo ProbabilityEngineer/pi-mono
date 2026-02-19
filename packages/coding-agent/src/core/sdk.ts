@@ -389,6 +389,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		initialActiveToolNames,
 		extensionRunnerRef,
 		hooksConfig: hookConfigResolution.config,
+		hooksConfigSourceName: hookConfigResolution.sourceName,
 	});
 	const extensionsResult = resourceLoader.getExtensions();
 
