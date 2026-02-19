@@ -14,7 +14,6 @@ export {
 export { type BashExecutorOptions, type BashResult, executeBash, executeBashWithOperations } from "./bash-executor.js";
 export type { CompactionResult } from "./compaction/index.js";
 export { createEventBus, type EventBus, type EventBusController } from "./event-bus.js";
-
 // Extensions system
 export {
 	type AgentEndEvent,
@@ -59,3 +58,26 @@ export {
 	type TurnStartEvent,
 	wrapToolsWithExtensions,
 } from "./extensions/index.js";
+export {
+	claudeSettingsHookConfigSource,
+	cliHooksConfigSource,
+	DEFAULT_HOOK_MAX_OUTPUT_BYTES,
+	DEFAULT_HOOK_TIMEOUT_MS,
+	envHooksConfigSource,
+	gastownBuiltInHookConfigSource,
+	HOOK_EVENT_NAMES,
+	type HookCommandPayload,
+	type HookCommandRunOptions,
+	type HookCommandRunResult,
+	type HookConfigResolution,
+	type HookConfigSource,
+	type HookDefinition,
+	type HookEventName,
+	type HookMatcher,
+	type HookResolutionInput,
+	type HooksConfigMap,
+	parseHooksConfig,
+	type ResolveHooksConfigOptions,
+	resolveHooksConfig,
+	runHookCommand,
+} from "./hooks/index.js";

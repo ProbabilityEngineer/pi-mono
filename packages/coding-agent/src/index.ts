@@ -140,6 +140,29 @@ export {
 } from "./core/extensions/index.js";
 // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
 export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.js";
+export {
+	claudeSettingsHookConfigSource,
+	cliHooksConfigSource,
+	DEFAULT_HOOK_MAX_OUTPUT_BYTES,
+	DEFAULT_HOOK_TIMEOUT_MS,
+	envHooksConfigSource,
+	gastownBuiltInHookConfigSource,
+	HOOK_EVENT_NAMES,
+	type HookCommandPayload,
+	type HookCommandRunOptions,
+	type HookCommandRunResult,
+	type HookConfigResolution,
+	type HookConfigSource,
+	type HookDefinition,
+	type HookEventName,
+	type HookMatcher,
+	type HookResolutionInput,
+	type HooksConfigMap,
+	parseHooksConfig,
+	type ResolveHooksConfigOptions,
+	resolveHooksConfig,
+	runHookCommand,
+} from "./core/hooks/index.js";
 export { convertToLlm } from "./core/messages.js";
 export { ModelRegistry } from "./core/model-registry.js";
 export type {
