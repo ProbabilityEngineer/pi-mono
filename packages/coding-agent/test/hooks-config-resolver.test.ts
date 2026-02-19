@@ -175,4 +175,23 @@ describe("resolveHooksConfig", () => {
 		expect(result.invalidRuntimeReason).toBe("hooks config file not found");
 		expect(result.errors[0]).toContain("[cli]");
 	});
+
+	test("does not fall back to gastown defaults when claude settings runtime config is invalid", async () => {
+		const dir = createTempDir();
+		const claudeDir = join(dir, ".claude");
+		mkdirSync(claudeDir, { recursive: true });
+		writeFileSync(join(claudeDir, "settings.json"), "{");
+
+		const result = await resolveHooksConfig({
+			cwd: dir,
+			enableClaudeSettingsLoader: true,
+			gastownMode: true,
+		});
+
+		expect(result.sourceName).toBe("claude_settings");
+		expect(result.config).toBeUndefined();
+		expect(result.invalidRuntimeConfig).toBe(true);
+		expect(result.hooksDisabledForSession).toBe(true);
+		expect(result.invalidRuntimeReason).toBe("invalid JSON");
+	});
 });
