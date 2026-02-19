@@ -2116,28 +2116,23 @@ export class AgentSession {
 		const activeExtensionTools = wrappedExtensionTools.filter((tool) => activeToolNameSet.has(tool.name));
 		const activeToolsArray: AgentTool[] = [...activeBaseTools, ...activeExtensionTools];
 
-		if (this._extensionRunner) {
-			const wrappedActiveTools = wrapToolsWithExtensions(activeToolsArray, this._extensionRunner, {
-				hookRunner: this._hookRunner,
-				cwd: this._cwd,
-				onPostToolUseAdditionalContext: (context) => {
-					this._enqueuePostToolHookContext(context);
-				},
-			});
-			this.agent.setTools(wrappedActiveTools as AgentTool[]);
+		const wrappedActiveTools = wrapToolsWithExtensions(activeToolsArray, this._extensionRunner, {
+			hookRunner: this._hookRunner,
+			cwd: this._cwd,
+			onPostToolUseAdditionalContext: (context) => {
+				this._enqueuePostToolHookContext(context);
+			},
+		});
+		this.agent.setTools(wrappedActiveTools as AgentTool[]);
 
-			const wrappedAllTools = wrapToolsWithExtensions(Array.from(toolRegistry.values()), this._extensionRunner, {
-				hookRunner: this._hookRunner,
-				cwd: this._cwd,
-				onPostToolUseAdditionalContext: (context) => {
-					this._enqueuePostToolHookContext(context);
-				},
-			});
-			this._toolRegistry = new Map(wrappedAllTools.map((tool) => [tool.name, tool]));
-		} else {
-			this.agent.setTools(activeToolsArray);
-			this._toolRegistry = toolRegistry;
-		}
+		const wrappedAllTools = wrapToolsWithExtensions(Array.from(toolRegistry.values()), this._extensionRunner, {
+			hookRunner: this._hookRunner,
+			cwd: this._cwd,
+			onPostToolUseAdditionalContext: (context) => {
+				this._enqueuePostToolHookContext(context);
+			},
+		});
+		this._toolRegistry = new Map(wrappedAllTools.map((tool) => [tool.name, tool]));
 
 		const systemPromptToolNames = Array.from(activeToolNameSet).filter((name) => this._baseToolRegistry.has(name));
 		this._baseSystemPrompt = this._rebuildSystemPrompt(systemPromptToolNames);
