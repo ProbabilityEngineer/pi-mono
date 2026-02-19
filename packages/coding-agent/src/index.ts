@@ -143,11 +143,13 @@ export {
 // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
 export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.js";
 export {
+	buildGastownHookDefaults,
 	claudeSettingsHookConfigSource,
 	cliHooksConfigSource,
 	DEFAULT_HOOK_MAX_OUTPUT_BYTES,
 	DEFAULT_HOOK_TIMEOUT_MS,
 	envHooksConfigSource,
+	type GastownCommandAvailability,
 	gastownBuiltInHookConfigSource,
 	HOOK_EVENT_NAMES,
 	type HookCommandPayload,
@@ -167,6 +169,7 @@ export {
 	type HooksConfigMap,
 	parseHooksConfig,
 	type ResolveHooksConfigOptions,
+	resolveGastownHookDefaults,
 	resolveHooksConfig,
 	runHookCommand,
 } from "./core/hooks/index.js";
