@@ -39,6 +39,8 @@ describe("resolveHooksConfig", () => {
 		expect(result.sourceName).toBe("cli");
 		expect(result.config?.SessionStart?.[0].command).toBe("echo cli");
 		expect(result.config?.PreCompact).toBeUndefined();
+		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.diagnostics).toEqual([]);
 	});
 
 	test("uses env config when cli is not provided", async () => {
@@ -50,6 +52,8 @@ describe("resolveHooksConfig", () => {
 
 		expect(result.sourceName).toBe("env");
 		expect(result.config?.PreToolUse?.[0].command).toBe("echo env guard");
+		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.diagnostics).toEqual([]);
 	});
 
 	test("stops on cli source error and reports diagnostics", async () => {
@@ -68,6 +72,15 @@ describe("resolveHooksConfig", () => {
 		expect(result.config).toBeUndefined();
 		expect(result.errors).toHaveLength(1);
 		expect(result.errors[0]).toContain("[cli]");
+		expect(result.invalidRuntimeConfig).toBe(true);
+		expect(result.invalidRuntimeSourceName).toBe("cli");
+		expect(result.invalidRuntimeReason).toBeTruthy();
+		expect(result.diagnostics).toEqual([
+			expect.objectContaining({
+				sourceName: "cli",
+				isRuntimeSource: true,
+			}),
+		]);
 	});
 
 	test("loads hooks from .claude/settings.local.json when loader is enabled", async () => {
@@ -96,6 +109,8 @@ describe("resolveHooksConfig", () => {
 		expect(result.sourceName).toBe("claude_settings");
 		expect(result.config?.PreToolUse?.[0].command).toBe("echo from-claude");
 		expect(result.config?.PreToolUse?.[0].matcher?.toolNames).toEqual(["bash"]);
+		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.diagnostics).toEqual([]);
 	});
 
 	test("uses claude loader when env config is absent and loader is enabled", async () => {
@@ -124,5 +139,7 @@ describe("resolveHooksConfig", () => {
 
 		expect(result.sourceName).toBe("claude_settings");
 		expect(result.config?.SessionStart?.[0].command).toBe("echo claude-start");
+		expect(result.invalidRuntimeConfig).toBe(false);
+		expect(result.diagnostics).toEqual([]);
 	});
 });
