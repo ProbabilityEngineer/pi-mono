@@ -141,11 +141,12 @@ export function wrapToolWithExtensions<T>(
 					});
 				}
 				if (hookOptions?.hookRunner) {
-					const hookResult = await hookOptions.hookRunner.runPostToolUse(
+					const hookResult = await hookOptions.hookRunner.runPostToolUseFailure(
 						hookOptions.cwd,
 						tool.name,
 						params,
 						toolCallId,
+						err instanceof Error ? err.message : String(err),
 					);
 					if (hookResult.additionalContext && hookOptions.onPostToolUseAdditionalContext) {
 						await hookOptions.onPostToolUseAdditionalContext(hookResult.additionalContext);
