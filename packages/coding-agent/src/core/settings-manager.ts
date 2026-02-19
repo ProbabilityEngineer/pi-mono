@@ -97,7 +97,6 @@ export interface Settings {
 	terminal?: TerminalSettings;
 	images?: ImageSettings;
 	enabledModels?: string[]; // Model patterns for cycling (same format as --models CLI flag)
-	modelFreeOnlyFilter?: boolean; // default: false - in /model, show only model IDs containing "free"
 	doubleEscapeAction?: "fork" | "tree" | "none"; // Action for double-escape with empty editor (default: "tree")
 	treeFilterMode?: "default" | "no-tools" | "user-only" | "labeled-only" | "all"; // Default filter when opening /tree
 	thinkingBudgets?: ThinkingBudgetsSettings; // Custom token budgets for thinking levels
@@ -897,16 +896,6 @@ export class SettingsManager {
 	setEnabledModels(patterns: string[] | undefined): void {
 		this.globalSettings.enabledModels = patterns;
 		this.markModified("enabledModels");
-		this.save();
-	}
-
-	getModelFreeOnlyFilter(): boolean {
-		return this.settings.modelFreeOnlyFilter ?? false;
-	}
-
-	setModelFreeOnlyFilter(enabled: boolean): void {
-		this.globalSettings.modelFreeOnlyFilter = enabled;
-		this.markModified("modelFreeOnlyFilter");
 		this.save();
 	}
 

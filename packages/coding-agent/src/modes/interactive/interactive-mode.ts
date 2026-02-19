@@ -1942,6 +1942,12 @@ export class InteractiveMode {
 				await this.handleModelCommand(searchTerm);
 				return;
 			}
+			if (text === "/freemodel" || text.startsWith("/freemodel ")) {
+				const searchTerm = text.startsWith("/freemodel ") ? text.slice(11).trim() : undefined;
+				this.editor.setText("");
+				this.showModelSelector(searchTerm, true);
+				return;
+			}
 			if (text.startsWith("/export")) {
 				await this.handleExportCommand(text);
 				this.editor.setText("");
@@ -3100,7 +3106,6 @@ export class InteractiveMode {
 					showImages: this.settingsManager.getShowImages(),
 					autoResizeImages: this.settingsManager.getImageAutoResize(),
 					blockImages: this.settingsManager.getBlockImages(),
-					modelFreeOnlyFilter: this.settingsManager.getModelFreeOnlyFilter(),
 					lspEnabled: this.settingsManager.getLspEnabled(),
 					enableSkillCommands: this.settingsManager.getEnableSkillCommands(),
 					steeringMode: this.session.steeringMode,
@@ -3149,10 +3154,6 @@ export class InteractiveMode {
 					},
 					onBlockImagesChange: (blocked) => {
 						this.settingsManager.setBlockImages(blocked);
-						rebuildSessionRuntime();
-					},
-					onModelFreeOnlyFilterChange: (enabled) => {
-						this.settingsManager.setModelFreeOnlyFilter(enabled);
 						rebuildSessionRuntime();
 					},
 					onLspEnabledChange: (enabled) => {
@@ -3331,7 +3332,7 @@ export class InteractiveMode {
 		this.footerDataProvider.setAvailableProviderCount(uniqueProviders.size);
 	}
 
-	private showModelSelector(initialSearchInput?: string): void {
+	private showModelSelector(initialSearchInput?: string, freeOnly = false): void {
 		this.showSelector((done) => {
 			const selector = new ModelSelectorComponent(
 				this.ui,
@@ -3357,6 +3358,7 @@ export class InteractiveMode {
 					this.ui.requestRender();
 				},
 				initialSearchInput,
+				freeOnly,
 			);
 			return { component: selector, focus: selector };
 		});
