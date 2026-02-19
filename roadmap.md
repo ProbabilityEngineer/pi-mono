@@ -7,6 +7,14 @@ Items here are exploratory and NOT implementation requirements.
 
 ## Near-term (post v1.1)
 
+- LSP + ast-grep + pre-commit role clarity rollout
+  - keep LSP assistive/non-blocking by default
+  - use structural tools (`ast-grep`) for bulk codemods when available
+  - keep pre-commit checks as final enforcement gate
+- Capability signaling for tool availability in startup/runtime context
+  - lsp enabled state
+  - per-language server readiness
+  - `ast-grep` availability
 - Complete remaining v1.1 deltas:
   - structured JSON decision parsing from hook stdout
   - `updatedInput` mutation for PreToolUse
@@ -23,6 +31,19 @@ Items here are exploratory and NOT implementation requirements.
 - `pi-mono-15s`: Hook execution logging guardrails
 - `pi-mono-b4c`: Validation, tests, and docs rollout
 - follow-up polish slices for `pi-mono-1km.*` and `pi-mono-15s.*`
+
+### New execution plan (beads, 2026-02-19)
+
+- `pi-mono-01e`: LSP/ast-grep policy and documentation baseline
+- `pi-mono-d7g`: Capability signaling for tool availability
+- `pi-mono-svw`: Prompt/tooling guidance rollout
+
+### Planning terminology (locked)
+
+- `epic`: multi-slice initiative (tracked in beads as `type=epic`)
+- `task`/`subtask`: hierarchical beads work items
+- `slice`: smallest independently shippable implementation unit
+- Commit rule: one slice per commit
 
 ### Already implemented (moved out of roadmap)
 
