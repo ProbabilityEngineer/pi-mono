@@ -316,4 +316,20 @@ describe("SettingsManager", () => {
 			expect(manager.getGastownMode()).toBe(false);
 		});
 	});
+
+	describe("model free-only filter settings", () => {
+		it("should default model free-only filter to disabled", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getModelFreeOnlyFilter()).toBe(false);
+		});
+
+		it("should persist and reload model free-only filter setting", async () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			manager.setModelFreeOnlyFilter(true);
+			await manager.flush();
+
+			manager.reload();
+			expect(manager.getModelFreeOnlyFilter()).toBe(true);
+		});
+	});
 });
