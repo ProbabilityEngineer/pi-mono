@@ -300,4 +300,20 @@ describe("SettingsManager", () => {
 			expect(manager.getEditMode()).toBe("replace");
 		});
 	});
+
+	describe("gastown mode settings", () => {
+		it("should default gastown mode to enabled", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getGastownMode()).toBe(true);
+		});
+
+		it("should persist and reload gastown mode", async () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			manager.setGastownMode(false);
+			await manager.flush();
+
+			manager.reload();
+			expect(manager.getGastownMode()).toBe(false);
+		});
+	});
 });
