@@ -39,6 +39,8 @@ export interface Args {
 	noThemes?: boolean;
 	listModels?: string | true;
 	verbose?: boolean;
+	gastown?: boolean;
+	hooksConfig?: string;
 	messages: string[];
 	fileArgs: string[];
 	/** Unknown flags (potentially extension flags) - map of flag name to value */
@@ -151,6 +153,10 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			}
 		} else if (arg === "--verbose") {
 			result.verbose = true;
+		} else if (arg === "--gastown") {
+			result.gastown = true;
+		} else if (arg === "--hooks-config" && i + 1 < args.length) {
+			result.hooksConfig = args[++i];
 		} else if (arg.startsWith("@")) {
 			result.fileArgs.push(arg.slice(1)); // Remove @ prefix
 		} else if (arg.startsWith("--") && extensionFlags) {
@@ -217,6 +223,8 @@ ${chalk.bold("Options:")}
   --export <file>                Export session file to HTML and exit
   --list-models [search]         List available models (with optional fuzzy search)
   --verbose                      Force verbose startup (overrides quietStartup setting)
+  --gastown                      Enable Gastown compatibility mode
+  --hooks-config <path>          Load hooks config from JSON file
   --help, -h                     Show this help
   --version, -v                  Show version number
 
@@ -297,6 +305,8 @@ ${chalk.bold("Environment Variables:")}
   PI_PACKAGE_DIR                   - Override package directory (for Nix/Guix store paths)
   PI_SHARE_VIEWER_URL              - Base URL for /share command (default: https://pi.dev/session/)
   PI_AI_ANTIGRAVITY_VERSION        - Override Antigravity User-Agent version (e.g., 1.23.0)
+  PI_GASTOWN_MODE                  - Enable Gastown compatibility mode (set to 1)
+  PI_HOOKS_JSON                    - Inline hooks config JSON (lower precedence than --hooks-config)
 
 ${chalk.bold("Available Tools (default: read, bash, edit, write):")}
   read   - Read file contents

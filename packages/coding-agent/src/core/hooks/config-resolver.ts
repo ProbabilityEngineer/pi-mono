@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { parseHooksConfig } from "./config.js";
+import { resolveGastownHookDefaults } from "./gastown-defaults.js";
 import type { HookConfigResolution, HookConfigSource, HookResolutionInput } from "./types.js";
 
 export const cliHooksConfigSource: HookConfigSource = {
@@ -41,7 +42,7 @@ export const gastownBuiltInHookConfigSource: HookConfigSource = {
 		if (!input.gastownMode) {
 			return undefined;
 		}
-		return undefined;
+		return resolveGastownHookDefaults();
 	},
 };
 

@@ -6,6 +6,7 @@ import { AgentSession } from "./agent-session.js";
 import { AuthStorage } from "./auth-storage.js";
 import { DEFAULT_THINKING_LEVEL } from "./defaults.js";
 import type { ExtensionRunner, LoadExtensionsResult, ToolDefinition } from "./extensions/index.js";
+import { resolveHooksConfig } from "./hooks/index.js";
 import { convertToLlm } from "./messages.js";
 import { ModelRegistry } from "./model-registry.js";
 import { findInitialModel } from "./model-resolver.js";
@@ -65,6 +66,14 @@ export interface CreateAgentSessionOptions {
 
 	/** Resource loader. When omitted, DefaultResourceLoader is used. */
 	resourceLoader?: ResourceLoader;
+	/** Optional hook config file path (highest precedence source). */
+	hooksConfigPath?: string;
+	/** Optional inline hook config JSON (secondary precedence source). */
+	hooksJson?: string;
+	/** Enable Gastown compatibility mode for built-in hook defaults. */
+	gastownMode?: boolean;
+	/** Enable optional Claude settings hook loader (disabled by default). */
+	enableClaudeSettingsLoader?: boolean;
 
 	/** Session manager. Default: SessionManager.create(cwd) */
 	sessionManager?: SessionManager;
@@ -249,6 +258,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		? options.tools.map((t) => t.name).filter((n): n is ToolName => n in allTools)
 		: defaultActiveToolNames;
 
+	const hookConfigResolution = await resolveHooksConfig({
+		hooksConfigPath: options.hooksConfigPath,
+		hooksJson: options.hooksJson,
+		gastownMode: options.gastownMode,
+		enableClaudeSettingsLoader: options.enableClaudeSettingsLoader,
+	});
+
 	let agent: Agent;
 
 	// Create convertToLlm wrapper that filters images if blockImages is enabled (defense-in-depth)
@@ -361,6 +377,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		modelRegistry,
 		initialActiveToolNames,
 		extensionRunnerRef,
+		hooksConfig: hookConfigResolution.config,
 	});
 	const extensionsResult = resourceLoader.getExtensions();
 

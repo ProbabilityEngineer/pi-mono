@@ -331,6 +331,20 @@ export class AgentSession {
 		this._hookSystemPromptContext = undefined;
 	}
 
+	private _enqueuePostToolHookContext(context: string): void {
+		const text = context.trim();
+		if (!text) {
+			return;
+		}
+		this._pendingNextTurnMessages.push({
+			role: "custom",
+			customType: "hook_post_tool_use",
+			content: [{ type: "text", text }],
+			display: false,
+			timestamp: Date.now(),
+		});
+	}
+
 	/** Model registry for API key resolution and model discovery */
 	get modelRegistry(): ModelRegistry {
 		return this._modelRegistry;
@@ -2102,22 +2116,23 @@ export class AgentSession {
 		const activeExtensionTools = wrappedExtensionTools.filter((tool) => activeToolNameSet.has(tool.name));
 		const activeToolsArray: AgentTool[] = [...activeBaseTools, ...activeExtensionTools];
 
-		if (this._extensionRunner) {
-			const wrappedActiveTools = wrapToolsWithExtensions(activeToolsArray, this._extensionRunner, {
-				hookRunner: this._hookRunner,
-				cwd: this._cwd,
-			});
-			this.agent.setTools(wrappedActiveTools as AgentTool[]);
+		const wrappedActiveTools = wrapToolsWithExtensions(activeToolsArray, this._extensionRunner, {
+			hookRunner: this._hookRunner,
+			cwd: this._cwd,
+			onPostToolUseAdditionalContext: (context) => {
+				this._enqueuePostToolHookContext(context);
+			},
+		});
+		this.agent.setTools(wrappedActiveTools as AgentTool[]);
 
-			const wrappedAllTools = wrapToolsWithExtensions(Array.from(toolRegistry.values()), this._extensionRunner, {
-				hookRunner: this._hookRunner,
-				cwd: this._cwd,
-			});
-			this._toolRegistry = new Map(wrappedAllTools.map((tool) => [tool.name, tool]));
-		} else {
-			this.agent.setTools(activeToolsArray);
-			this._toolRegistry = toolRegistry;
-		}
+		const wrappedAllTools = wrapToolsWithExtensions(Array.from(toolRegistry.values()), this._extensionRunner, {
+			hookRunner: this._hookRunner,
+			cwd: this._cwd,
+			onPostToolUseAdditionalContext: (context) => {
+				this._enqueuePostToolHookContext(context);
+			},
+		});
+		this._toolRegistry = new Map(wrappedAllTools.map((tool) => [tool.name, tool]));
 
 		const systemPromptToolNames = Array.from(activeToolNameSet).filter((name) => this._baseToolRegistry.has(name));
 		this._baseSystemPrompt = this._rebuildSystemPrompt(systemPromptToolNames);
