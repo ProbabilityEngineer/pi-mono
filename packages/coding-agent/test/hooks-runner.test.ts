@@ -11,6 +11,7 @@ describe("HookRunner", () => {
 		const first = await runner.runSessionStart(process.cwd());
 		expect(first.invocations).toHaveLength(1);
 		expect(first.additionalContext).toContain("hello");
+		expect(first.invocations[0].durationMs).toBeGreaterThanOrEqual(0);
 
 		const second = await runner.runSessionStart(process.cwd());
 		expect(second.invocations).toHaveLength(0);
@@ -42,6 +43,8 @@ describe("HookRunner", () => {
 
 		expect(result.blocked).toBe(true);
 		expect(result.reason).toContain("blocked");
+		expect(result.invocations[0].decision).toBe("deny");
+		expect(result.invocations[0].reason).toContain("blocked");
 	});
 
 	test("fails open for non-zero PreToolUse by default", async () => {
@@ -54,6 +57,7 @@ describe("HookRunner", () => {
 		expect(result.blocked).toBe(false);
 		expect(result.invocations).toHaveLength(1);
 		expect(result.invocations[0].failed).toBe(true);
+		expect(result.invocations[0].decision).toBe("allow");
 	});
 
 	test("blocks on non-zero PreToolUse when failOpen is false", async () => {
@@ -65,6 +69,18 @@ describe("HookRunner", () => {
 
 		expect(result.blocked).toBe(true);
 		expect(result.reason).toContain("hard fail");
+		expect(result.invocations[0].decision).toBe("deny");
+	});
+
+	test("attaches config source name to invocations", async () => {
+		const config: HooksConfigMap = {
+			SessionStart: [{ command: "printf 'hello'" }],
+		};
+		const runner = new HookRunner({ config, configSourceName: "env" });
+		const result = await runner.runSessionStart(process.cwd());
+
+		expect(result.invocations).toHaveLength(1);
+		expect(result.invocations[0].configSourceName).toBe("env");
 	});
 
 	test("runs PostToolUseFailure hooks and captures output", async () => {

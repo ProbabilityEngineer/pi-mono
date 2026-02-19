@@ -12,6 +12,7 @@ import type {
 
 interface HookRunnerOptions {
 	config: HooksConfigMap;
+	configSourceName?: string;
 }
 
 function normalizeOutput(stdout: string, stderr: string): string | undefined {
@@ -21,10 +22,12 @@ function normalizeOutput(stdout: string, stderr: string): string | undefined {
 
 export class HookRunner {
 	private readonly config: HooksConfigMap;
+	private readonly configSourceName: string | undefined;
 	private sessionStartCompleted = false;
 
 	constructor(options: HookRunnerOptions) {
 		this.config = options.config;
+		this.configSourceName = options.configSourceName;
 	}
 
 	resetSessionStart(): void {
@@ -45,17 +48,21 @@ export class HookRunner {
 				continue;
 			}
 
+			const startedAt = Date.now();
 			const result = await runHookCommand(hook.command, {
 				cwd,
 				payload,
 				timeoutMs: hook.timeoutMs,
 			});
+			const durationMs = Date.now() - startedAt;
 
 			const failed = result.code !== 0 && result.code !== 2;
 			invocations.push({
 				eventName,
 				command: hook.command,
+				configSourceName: this.configSourceName,
 				code: result.code,
+				durationMs,
 				stdout: result.stdout,
 				stderr: result.stderr,
 				timedOut: result.timedOut,
@@ -106,6 +113,7 @@ export class HookRunner {
 				continue;
 			}
 
+			const startedAt = Date.now();
 			const result = await runHookCommand(hook.command, {
 				cwd,
 				payload: {
@@ -117,30 +125,40 @@ export class HookRunner {
 				},
 				timeoutMs: hook.timeoutMs,
 			});
+			const durationMs = Date.now() - startedAt;
 			const failed = result.code !== 0 && result.code !== 2;
 			const invocation: HookInvocationRecord = {
 				eventName: "PreToolUse",
 				command: hook.command,
+				configSourceName: this.configSourceName,
 				code: result.code,
+				durationMs,
 				stdout: result.stdout,
 				stderr: result.stderr,
 				timedOut: result.timedOut,
 				failed,
+				decision: "allow",
 			};
 			invocations.push(invocation);
 
 			if (result.code === 2) {
+				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook";
+				invocation.decision = "deny";
+				invocation.reason = reason;
 				return {
 					blocked: true,
-					reason: normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook",
+					reason,
 					invocations,
 				};
 			}
 
 			if (failed && hook.failOpen === false) {
+				const reason = normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook failure";
+				invocation.decision = "deny";
+				invocation.reason = reason;
 				return {
 					blocked: true,
-					reason: normalizeOutput(result.stdout, result.stderr) ?? "Tool call blocked by hook failure",
+					reason,
 					invocations,
 				};
 			}
