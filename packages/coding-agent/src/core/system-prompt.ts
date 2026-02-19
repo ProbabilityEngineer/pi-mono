@@ -136,31 +136,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
 	// LSP usage guidelines
 	if (hasLsp) {
 		guidelinesList.push(
-			"Prefer lsp.definition/references/symbols for symbol navigation and impact analysis; use read/grep/find as fallback when LSP cannot answer.",
-		);
-		guidelinesList.push(
-			"lsp.definition/references/hover are position-based (file + line + column). If you only have a symbol name, use lsp.symbols first to locate position.",
-		);
-		guidelinesList.push(
-			"Use lsp.hover to verify types/signatures and lsp.diagnostics before and after code edits when relevant.",
-		);
-		guidelinesList.push(
-			"Prefer lsp.rename for symbol renames and lsp.format for formatting when language servers support it.",
-		);
-		guidelinesList.push(
-			"If LSP returns no result, read the nearby file region once and retry with corrected position before falling back.",
-		);
-		guidelinesList.push(
-			"Use lsp.rename/lsp.format only when edit/write tools are available; in read-only runs, skip mutating LSP actions.",
-		);
-		guidelinesList.push(
-			"If LSP is disabled/unconfigured or unsupported for the language, fall back directly to read/grep/find and avoid repeated failing LSP calls.",
-		);
-		guidelinesList.push(
-			"For ambiguous symbols, use lsp.document symbols first, then lsp.workspace symbols to disambiguate scope.",
-		);
-		guidelinesList.push(
-			"Treat LSP as authoritative for symbol mapping, then verify final code text with read before summarizing.",
+			"Use LSP for semantic navigation when available; otherwise fall back to read/grep/find workflows.",
 		);
 	}
 
