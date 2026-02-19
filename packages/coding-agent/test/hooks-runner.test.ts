@@ -176,4 +176,26 @@ describe("HookRunner", () => {
 			"truncated",
 		]);
 	});
+
+	test("redacts representative secret fixture matrix in invocation logs", async () => {
+		const samples = [
+			"token=sk-abcdefghijklmnopqrstuvwxyz",
+			"github=ghp_abcdefghijklmnopqrstuvwxyz123456",
+			"google=AIzaSyD6A1zW9xY2mN4qR7tU0vB3cE6fH8iJ",
+			"Authorization: Bearer supersecrettokenvalue123",
+			"MY_API_KEY=abc123secretvalue",
+		];
+
+		for (const sample of samples) {
+			const config: HooksConfigMap = {
+				PreToolUse: [{ command: `printf '${sample}'` }],
+			};
+			const runner = new HookRunner({ config });
+			const result = await runner.runPreToolUse(process.cwd(), "bash", {}, "tool-9");
+
+			expect(result.invocations).toHaveLength(1);
+			expect(result.invocations[0].redacted).toBe(true);
+			expect(result.invocations[0].stdout).toContain("[REDACTED]");
+		}
+	});
 });
