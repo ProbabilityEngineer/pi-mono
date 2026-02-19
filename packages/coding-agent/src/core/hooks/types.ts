@@ -48,6 +48,7 @@ export interface HookConfigResolution {
 	invalidRuntimeConfig: boolean;
 	invalidRuntimeSourceName?: string;
 	invalidRuntimeReason?: string;
+	hooksDisabledForSession: boolean;
 }
 
 export interface HookCommandPayload {

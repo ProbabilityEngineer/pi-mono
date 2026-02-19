@@ -195,6 +195,7 @@ export async function resolveHooksConfig(
 					errors,
 					diagnostics,
 					invalidRuntimeConfig: false,
+					hooksDisabledForSession: false,
 				};
 			}
 		} catch (error) {
@@ -214,6 +215,7 @@ export async function resolveHooksConfig(
 				invalidRuntimeConfig: isRuntimeSource,
 				invalidRuntimeSourceName: isRuntimeSource ? source.name : undefined,
 				invalidRuntimeReason: isRuntimeSource ? message : undefined,
+				hooksDisabledForSession: isRuntimeSource,
 			};
 		}
 	}
@@ -224,5 +226,6 @@ export async function resolveHooksConfig(
 		errors,
 		diagnostics,
 		invalidRuntimeConfig: false,
+		hooksDisabledForSession: false,
 	};
 }
