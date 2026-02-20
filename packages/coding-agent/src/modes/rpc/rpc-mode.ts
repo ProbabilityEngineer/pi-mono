@@ -19,6 +19,7 @@ import type {
 	ExtensionUIDialogOptions,
 	ExtensionWidgetOptions,
 } from "../../core/extensions/index.js";
+import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
 import { type Theme, theme } from "../interactive/theme/theme.js";
 import type {
 	RpcCommand,
@@ -540,6 +541,15 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 
 			case "get_commands": {
 				const commands: RpcSlashCommand[] = [];
+
+				for (const builtin of BUILTIN_SLASH_COMMANDS) {
+					commands.push({
+						name: builtin.name,
+						description: builtin.description,
+						source: "builtin",
+						location: "builtin",
+					});
+				}
 
 				// Extension commands
 				for (const { command, extensionPath } of session.extensionRunner?.getRegisteredCommandsWithPaths() ?? []) {

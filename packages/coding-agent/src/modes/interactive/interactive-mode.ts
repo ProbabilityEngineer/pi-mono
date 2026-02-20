@@ -1928,6 +1928,11 @@ export class InteractiveMode {
 				this.editor.setText("");
 				return;
 			}
+			if (text === "/help") {
+				this.handleHelpCommand();
+				this.editor.setText("");
+				return;
+			}
 			if (text === "/hotkeys") {
 				this.handleHotkeysCommand();
 				this.editor.setText("");
@@ -4125,6 +4130,58 @@ export class InteractiveMode {
 		this.chatContainer.addChild(new Text(theme.bold(theme.fg("accent", "What's New")), 1, 0));
 		this.chatContainer.addChild(new Spacer(1));
 		this.chatContainer.addChild(new Markdown(changelogMarkdown, 1, 1, this.getMarkdownThemeWithSettings()));
+		this.chatContainer.addChild(new DynamicBorder());
+		this.ui.requestRender();
+	}
+
+	private handleHelpCommand(): void {
+		const builtinRows = [...BUILTIN_SLASH_COMMANDS]
+			.sort((a, b) => a.name.localeCompare(b.name))
+			.map((command) => `| \`/${command.name}\` | ${command.description} |`);
+
+		const promptRows = [...this.session.promptTemplates]
+			.sort((a, b) => a.name.localeCompare(b.name))
+			.map((template) => `| \`/${template.name}\` | ${template.description || "(no description)"} |`);
+
+		const extensionRows = [
+			...(this.session.extensionRunner?.getRegisteredCommands(new Set(BUILTIN_SLASH_COMMANDS.map((c) => c.name))) ??
+				[]),
+		]
+			.sort((a, b) => a.name.localeCompare(b.name))
+			.map((command) => `| \`/${command.name}\` | ${command.description || "(extension command)"} |`);
+
+		const skillRows = this.settingsManager.getEnableSkillCommands()
+			? [...this.session.resourceLoader.getSkills().skills]
+					.sort((a, b) => a.name.localeCompare(b.name))
+					.map((skill) => `| \`/skill:${skill.name}\` | ${skill.description} |`)
+			: [];
+
+		const section = (title: string, rows: string[], empty: string) =>
+			[
+				`**${title}**`,
+				"| Command | Description |",
+				"|---|---|",
+				...(rows.length > 0 ? rows : [`| _(none)_ | ${empty} |`]),
+			].join("\n");
+
+		const helpMarkdown = [
+			section("Built-in", builtinRows, "No built-in commands available."),
+			section("Prompt Templates", promptRows, "No prompt templates loaded."),
+			section("Extensions", extensionRows, "No extension commands loaded."),
+			section(
+				"Skills",
+				skillRows,
+				this.settingsManager.getEnableSkillCommands()
+					? "No skills loaded."
+					: "Enable `Skill commands` in /settings to expose /skill:* commands.",
+			),
+		].join("\n\n");
+
+		this.chatContainer.addChild(new Spacer(1));
+		this.chatContainer.addChild(new DynamicBorder());
+		this.chatContainer.addChild(new Text(theme.bold(theme.fg("accent", "Slash Commands")), 1, 0));
+		this.chatContainer.addChild(new Spacer(1));
+		this.chatContainer.addChild(new Markdown(helpMarkdown, 1, 1, this.getMarkdownThemeWithSettings()));
 		this.chatContainer.addChild(new DynamicBorder());
 		this.ui.requestRender();
 	}
