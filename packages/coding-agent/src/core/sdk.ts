@@ -259,8 +259,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	}
 
 	const defaultActiveToolNames: ToolName[] = settingsManager.getLspEnabled()
-		? ["read", "bash", "edit", "write", "lsp"]
-		: ["read", "bash", "edit", "write"];
+		? ["read", "bash", "edit", "write", "lsp", "ast-grep"]
+		: ["read", "bash", "edit", "write", "ast-grep"];
 	const initialActiveToolNames: ToolName[] = options.tools
 		? options.tools.map((t) => t.name).filter((n): n is ToolName => n in allTools)
 		: defaultActiveToolNames;
