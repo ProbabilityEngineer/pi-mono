@@ -89,6 +89,15 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain(
 				"For completeness-required reporting, run a lexical backstop query (`rg` preferred, then `grep`) over likely source files and merge/dedupe results.",
 			);
+			expect(prompt).toContain(
+				'For extraction/listing requests (e.g., "find/list all declarations/usages"), stop after collecting sufficient evidence lines; avoid exploratory full-file reads unless a matched line lacks needed context.',
+			);
+			expect(prompt).toContain(
+				"If a tool already returns `file:line` plus matched line text, use that output directly instead of re-reading files for the same evidence.",
+			);
+			expect(prompt).toContain(
+				"Pattern-retry discipline: for the same search intent, do at most two pattern attempts per tool, then switch strategy.",
+			);
 			expect(prompt).toContain("If `ast-grep=available`, use it for bulk structural rewrites across many files.");
 			expect(prompt).toContain(
 				"Standardize completeness backstop to one canonical lexical query for the symbol set, then merge/dedupe results.",
