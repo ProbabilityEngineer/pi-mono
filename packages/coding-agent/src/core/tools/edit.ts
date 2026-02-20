@@ -22,22 +22,24 @@ const replaceEditSchema = Type.Object({
 
 const hashlineSingleSchema = Type.Object({
 	set_line: Type.Object({
-		anchor: Type.String({ description: 'Line reference "LINE:HASH"' }),
+		anchor: Type.String({ description: 'Line reference "<lineNumber>:<hash>" (example: "12:49c4e9")' }),
 		new_text: Type.String({ description: "Replacement content (empty string deletes the line)" }),
 	}),
 });
 
 const hashlineRangeSchema = Type.Object({
 	replace_lines: Type.Object({
-		start_anchor: Type.String({ description: 'Start line reference "LINE:HASH"' }),
-		end_anchor: Type.String({ description: 'End line reference "LINE:HASH"' }),
+		start_anchor: Type.String({ description: 'Start line reference "<lineNumber>:<hash>" (example: "12:49c4e9")' }),
+		end_anchor: Type.String({ description: 'End line reference "<lineNumber>:<hash>" (example: "12:49c4e9")' }),
 		new_text: Type.String({ description: "Replacement content (empty string deletes the range)" }),
 	}),
 });
 
 const hashlineInsertSchema = Type.Object({
 	insert_after: Type.Object({
-		anchor: Type.String({ description: 'Insert after this line reference "LINE:HASH"' }),
+		anchor: Type.String({
+			description: 'Insert after this line reference "<lineNumber>:<hash>" (example: "12:49c4e9")',
+		}),
 		text: Type.String({ description: "Content to insert" }),
 	}),
 });
