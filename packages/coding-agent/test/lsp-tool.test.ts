@@ -54,6 +54,7 @@ describe("lsp tool", () => {
 		const tool = createLspTool("/workspace");
 		const result = await tool.execute("call-empty", { action: "" });
 		expect(getTextContent(result)).toContain('defaulted to "status"');
+		expect(getTextContent(result)).toContain("Status is optional");
 		expect(getTextContent(result)).toContain("Do not keep polling status");
 	});
 
@@ -292,6 +293,7 @@ describe("lsp tool", () => {
 		const tool = createLspTool("/workspace");
 		const result = await tool.execute("call-status-empty", { action: "status" });
 		expect(getTextContent(result)).toContain("No active LSP servers");
+		expect(getTextContent(result)).toContain("Status is optional");
 		expect(getTextContent(result)).toContain("Do not keep polling status");
 	});
 

@@ -250,7 +250,7 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 							content: [
 								{
 									type: "text",
-									text: `${statusPrefix}No active LSP servers. This can be normal before the first file-based LSP call. Do not keep polling status; either run a concrete LSP action (symbols/definition/references with file+position) or fall back to read/grep/find.`,
+									text: `${statusPrefix}No active LSP servers. This can be normal before the first file-based LSP call. Status is optional: prefer discovering a concrete source file and running a direct file-based LSP action (symbols/definition/references with file+position). Do not keep polling status; fall back to read/grep/find when needed.`,
 								},
 							],
 							details: { action: resolvedAction, success: true } satisfies LspToolDetails,
