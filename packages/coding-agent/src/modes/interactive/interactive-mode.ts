@@ -3037,6 +3037,17 @@ export class InteractiveMode {
 
 	private showSettingsSelector(): void {
 		this.showSelector((done) => {
+			const getManualRemediation = (serverName: string) => {
+				const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
+				if (!server) {
+					return `Unknown LSP server: ${serverName}`;
+				}
+				return (
+					server.installer?.remediation ??
+					`Install \`${server.command}\` manually and ensure it is available on PATH, then retry from /settings.`
+				);
+			};
+
 			const getAllLspServers = () =>
 				buildLspServerSettingsState({
 					cwd: process.cwd(),
@@ -3117,7 +3128,7 @@ export class InteractiveMode {
 						const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
 						if (!server) {
 							this.showError(`Unknown LSP server: ${serverName}`);
-							return;
+							return false;
 						}
 						const result = await ensureServerInstalled(process.cwd(), server);
 						if (result.status === "installed" || result.status === "already_installed") {
@@ -3125,19 +3136,20 @@ export class InteractiveMode {
 							this.settingsManager.setLspServerEnabled(serverName, true);
 							this.showStatus(`LSP server ready: ${serverName}`);
 							rebuildSessionRuntime();
-							return;
+							return true;
 						}
 						if (result.remediation) {
 							this.showError(`Failed to install ${serverName}: ${result.remediation}`);
-							return;
+							return false;
 						}
 						this.showError(`Failed to install ${serverName}: ${result.error ?? "unknown error"}`);
+						return false;
 					},
 					onLspServerUninstall: async (serverName) => {
 						const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
 						if (!server) {
 							this.showError(`Unknown LSP server: ${serverName}`);
-							return;
+							return false;
 						}
 						const result = await ensureServerUninstalled(process.cwd(), server);
 						if (result.status === "uninstalled" || result.status === "already_uninstalled") {
@@ -3145,13 +3157,18 @@ export class InteractiveMode {
 							this.settingsManager.setLspServerEnabled(serverName, false);
 							this.showStatus(`LSP server removed: ${serverName}`);
 							rebuildSessionRuntime();
-							return;
+							return true;
 						}
 						if (result.remediation) {
 							this.showError(`Failed to uninstall ${serverName}: ${result.remediation}`);
-							return;
+							return false;
 						}
 						this.showError(`Failed to uninstall ${serverName}: ${result.error ?? "unknown error"}`);
+						return false;
+					},
+					onLspServerShowManualGuidance: (serverName) => {
+						const remediation = getManualRemediation(serverName);
+						this.showStatus(`LSP server guidance (${serverName}): ${remediation}`);
 					},
 					onEnableSkillCommandsChange: (enabled) => {
 						this.settingsManager.setEnableSkillCommands(enabled);

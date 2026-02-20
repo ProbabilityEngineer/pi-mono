@@ -28,6 +28,7 @@ export interface LspServerSettingEntry {
 	enabled?: boolean;
 	installed: boolean;
 	canInstall: boolean;
+	manualRemediation?: string;
 }
 
 export interface SettingsConfig {
@@ -66,8 +67,9 @@ export interface SettingsCallbacks {
 	onBlockImagesChange: (blocked: boolean) => void;
 	onLspEnabledChange: (enabled: boolean) => void;
 	onLspServerEnabledChange: (serverName: string, enabled: boolean) => void;
-	onLspServerInstall: (serverName: string) => Promise<void> | void;
-	onLspServerUninstall: (serverName: string) => Promise<void> | void;
+	onLspServerInstall: (serverName: string) => Promise<boolean> | boolean;
+	onLspServerUninstall: (serverName: string) => Promise<boolean> | boolean;
+	onLspServerShowManualGuidance: (serverName: string) => Promise<void> | void;
 	onEnableSkillCommandsChange: (enabled: boolean) => void;
 	onSteeringModeChange: (mode: "all" | "one-at-a-time") => void;
 	onFollowUpModeChange: (mode: "all" | "one-at-a-time") => void;
@@ -84,6 +86,30 @@ export interface SettingsCallbacks {
 	onQuietStartupChange: (enabled: boolean) => void;
 	onClearOnShrinkChange: (enabled: boolean) => void;
 	onCancel: () => void;
+}
+
+export function getLspServerActionOptions(server: LspServerSettingEntry): SelectItem[] {
+	const options: SelectItem[] = [
+		{
+			value: "toggle-enabled",
+			label: server.enabled === false ? "Enable" : "Disable",
+			description: server.enabled === false ? "Allow this server at runtime" : "Prevent this server at runtime",
+		},
+	];
+	if (server.canInstall) {
+		options.push(
+			{ value: "install", label: "Install", description: "Run installer command" },
+			{ value: "uninstall", label: "Uninstall", description: "Run uninstall command and disable server" },
+		);
+	} else {
+		options.push({
+			value: "manual-guidance",
+			label: "Manual setup",
+			description: "Show installation guidance for this server",
+		});
+	}
+	options.push({ value: "back", label: "Back", description: "Return to server list" });
+	return options;
 }
 
 /**
@@ -156,7 +182,7 @@ class LspServerSubmenu extends Container {
 		servers: LspServerSettingEntry[],
 		private callbacks: Pick<
 			SettingsCallbacks,
-			"onLspServerEnabledChange" | "onLspServerInstall" | "onLspServerUninstall"
+			"onLspServerEnabledChange" | "onLspServerInstall" | "onLspServerUninstall" | "onLspServerShowManualGuidance"
 		>,
 		private onDone: () => void,
 	) {
@@ -205,20 +231,7 @@ class LspServerSubmenu extends Container {
 		this.addChild(new Text(theme.fg("muted", `${server.command}`), 0, 0));
 		this.addChild(new Spacer(1));
 
-		const actionOptions: SelectItem[] = [
-			{
-				value: "toggle-enabled",
-				label: server.enabled === false ? "Enable" : "Disable",
-				description: server.enabled === false ? "Allow this server at runtime" : "Prevent this server at runtime",
-			},
-		];
-		if (server.canInstall) {
-			actionOptions.push(
-				{ value: "install", label: "Install", description: "Run installer command" },
-				{ value: "uninstall", label: "Uninstall", description: "Run uninstall command and disable server" },
-			);
-		}
-		actionOptions.push({ value: "back", label: "Back", description: "Return to server list" });
+		const actionOptions = getLspServerActionOptions(server);
 
 		this.selectList = new SelectList(actionOptions, actionOptions.length, getSelectListTheme());
 		this.selectList.onSelect = (item) => {
@@ -233,14 +246,21 @@ class LspServerSubmenu extends Container {
 					this.callbacks.onLspServerEnabledChange(server.name, nextEnabled);
 				}
 				if (item.value === "install") {
-					await this.callbacks.onLspServerInstall(server.name);
-					server.installed = true;
-					server.enabled = true;
+					const installSucceeded = await this.callbacks.onLspServerInstall(server.name);
+					if (installSucceeded) {
+						server.installed = true;
+						server.enabled = true;
+					}
 				}
 				if (item.value === "uninstall") {
-					await this.callbacks.onLspServerUninstall(server.name);
-					server.installed = false;
-					server.enabled = false;
+					const uninstallSucceeded = await this.callbacks.onLspServerUninstall(server.name);
+					if (uninstallSucceeded) {
+						server.installed = false;
+						server.enabled = false;
+					}
+				}
+				if (item.value === "manual-guidance") {
+					await this.callbacks.onLspServerShowManualGuidance(server.name);
 				}
 				this.renderServerActions(server);
 			})();
@@ -461,6 +481,7 @@ export class SettingsSelectorComponent extends Container {
 						onLspServerEnabledChange: callbacks.onLspServerEnabledChange,
 						onLspServerInstall: callbacks.onLspServerInstall,
 						onLspServerUninstall: callbacks.onLspServerUninstall,
+						onLspServerShowManualGuidance: callbacks.onLspServerShowManualGuidance,
 					},
 					() => done(),
 				),
