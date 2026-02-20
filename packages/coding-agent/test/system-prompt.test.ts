@@ -122,6 +122,9 @@ describe("buildSystemPrompt", () => {
 				"If the first LSP call has low-confidence context (unanchored position, wrong file, or obvious mismatch), skip further LSP retries and move to the backstop.",
 			);
 			expect(prompt).toContain(
+				"Target-position sanity: do not run `lsp.definition`/`lsp.references` on an unanchored declaration position. Anchor the symbol token position first (for example via file-scoped symbols), or skip to lexical backstop.",
+			);
+			expect(prompt).toContain(
 				"If diagnostics are explicitly requested, use `lsp.status` at most once per turn; it must not block direct file-based LSP calls.",
 			);
 			expect(prompt).toContain("Default to concise evidence output:");
