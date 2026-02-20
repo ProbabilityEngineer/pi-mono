@@ -75,7 +75,7 @@ describe("buildSystemPrompt", () => {
 				"For semantic lookup tasks, use discovery-first order: locate concrete source files first (`rg`/`find`, or `ast-grep` for structural discovery), then run one anchored file-scoped LSP call when `lsp=enabled`.",
 			);
 			expect(prompt).toContain(
-				"Do not start semantic workflows with `lsp.status`. Use `lsp.status` only as optional diagnostics.",
+				"For semantic lookup/completeness-required tasks, do not call `lsp.status` unless the user explicitly asks for LSP/server diagnostics.",
 			);
 			expect(prompt).toContain(
 				"For semantic lookup where completeness matters, do at most one concrete `lsp.references`/`lsp.symbols` attempt after anchoring, then move on quickly if results are empty.",
@@ -100,8 +100,12 @@ describe("buildSystemPrompt", () => {
 				"If the first LSP call has low-confidence context (unanchored position, wrong file, or obvious mismatch), skip further LSP retries and move to the backstop.",
 			);
 			expect(prompt).toContain(
-				"Default to concise evidence output (`file:line` entries and brief snippets). Avoid long narrative analysis unless the user asks for it.",
+				"If diagnostics are explicitly requested, use `lsp.status` at most once per turn; it must not block direct file-based LSP calls.",
 			);
+			expect(prompt).toContain("Default to concise evidence output:");
+			expect(prompt).toContain("one compact list of `file:line` entries with short snippets");
+			expect(prompt).toContain("one optional total-count line");
+			expect(prompt).toContain("no long narrative analysis unless the user asks for it");
 			expect(prompt).not.toContain("transition to LSP as early as possible");
 			expect(prompt).not.toContain("Quick anti-patterns to avoid:");
 			expect(prompt).not.toContain("If `ast-grep=unavailable`, do not plan around `ast-grep`");
