@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { globSync } from "glob";
 import { parse as parseYaml } from "yaml";
+import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
 import DEFAULTS from "./defaults.json";
 import { type CommandProbeResult, type CommandProbeRunner, runCommandProbe } from "./probe.js";
 import type { LspConfigFile, LspServerDefinition, ResolvedLspServer } from "./types.js";
@@ -40,6 +41,37 @@ export interface CommandAvailabilityOptions {
 	commandProbeContract?: CommandProbeContract;
 	commandProbeRunner?: CommandProbeRunner;
 	exists?: (path: string) => boolean;
+}
+
+interface LspServerRuntimeSettings {
+	enabled?: boolean;
+	installed?: boolean;
+}
+
+function parseSettings(path: string): Record<string, unknown> {
+	if (!existsSync(path)) {
+		return {};
+	}
+	try {
+		return JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+	} catch {
+		return {};
+	}
+}
+
+function loadServerRuntimeSettings(cwd: string): Record<string, LspServerRuntimeSettings> {
+	const globalSettingsPath = join(getAgentDir(), "settings.json");
+	const projectSettingsPath = join(cwd, CONFIG_DIR_NAME, "settings.json");
+	const globalSettings = parseSettings(globalSettingsPath);
+	const projectSettings = parseSettings(projectSettingsPath);
+	const globalServers = (globalSettings.lsp as { servers?: Record<string, LspServerRuntimeSettings> } | undefined)
+		?.servers;
+	const projectServers = (projectSettings.lsp as { servers?: Record<string, LspServerRuntimeSettings> } | undefined)
+		?.servers;
+	return {
+		...(globalServers ?? {}),
+		...(projectServers ?? {}),
+	};
 }
 
 function loadOverrides(cwd: string): Record<string, Partial<LspServerDefinition>> {
@@ -255,12 +287,14 @@ export function isCommandAvailable(command: string, cwd: string, options: Comman
 export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 	const defaults = DEFAULTS as Record<string, LspServerDefinition>;
 	const overrides = loadOverrides(cwd);
+	const runtimeSettings = loadServerRuntimeSettings(cwd);
 	const merged: Record<string, ResolvedLspServer> = {};
 
 	for (const [name, server] of Object.entries(defaults)) {
 		const override = overrides[name];
 		const disabled = override?.disabled ?? server.disabled;
-		if (disabled) {
+		const runtimeEnabled = runtimeSettings[name]?.enabled;
+		if (disabled || runtimeEnabled === false) {
 			continue;
 		}
 		const command = override?.command ?? server.command;
@@ -275,7 +309,8 @@ export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
 	}
 
 	for (const [name, override] of Object.entries(overrides)) {
-		if (merged[name] || !override.command || !override.languages || override.disabled) {
+		const runtimeEnabled = runtimeSettings[name]?.enabled;
+		if (merged[name] || !override.command || !override.languages || override.disabled || runtimeEnabled === false) {
 			continue;
 		}
 		merged[name] = {

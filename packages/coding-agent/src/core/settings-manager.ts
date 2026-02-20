@@ -51,6 +51,12 @@ export interface LspSettings {
 	autoEnableOnEncounter?: boolean; // default: true
 	autoInstallOnEncounter?: boolean; // default: true
 	languages?: Record<string, boolean>; // default: {}
+	servers?: Record<string, LspServerSettings>; // default: {}
+}
+
+export interface LspServerSettings {
+	enabled?: boolean; // default: undefined (use default config behavior)
+	installed?: boolean; // best-effort marker for install/uninstall actions from /settings
 }
 
 export type TransportSetting = Transport;
@@ -970,6 +976,54 @@ export class SettingsManager {
 
 	getLspLanguageEnabled(languageId: string): boolean {
 		return this.settings.lsp?.languages?.[languageId] === true;
+	}
+
+	getLspServerSettings(serverName: string): LspServerSettings {
+		return structuredClone(this.settings.lsp?.servers?.[serverName] ?? {});
+	}
+
+	getLspServerEnabled(serverName: string): boolean | undefined {
+		return this.settings.lsp?.servers?.[serverName]?.enabled;
+	}
+
+	setLspServerEnabled(serverName: string, enabled: boolean): void {
+		if (!this.globalSettings.lsp) {
+			this.globalSettings.lsp = {};
+		}
+		if (!this.globalSettings.lsp.servers) {
+			this.globalSettings.lsp.servers = {};
+		}
+		const currentServerSettings = this.globalSettings.lsp.servers[serverName] ?? {};
+		this.globalSettings.lsp.servers[serverName] = { ...currentServerSettings, enabled };
+		this.markModified("lsp", "servers");
+		this.save();
+	}
+
+	setLspServerInstalled(serverName: string, installed: boolean): void {
+		if (!this.globalSettings.lsp) {
+			this.globalSettings.lsp = {};
+		}
+		if (!this.globalSettings.lsp.servers) {
+			this.globalSettings.lsp.servers = {};
+		}
+		const currentServerSettings = this.globalSettings.lsp.servers[serverName] ?? {};
+		this.globalSettings.lsp.servers[serverName] = { ...currentServerSettings, installed };
+		this.markModified("lsp", "servers");
+		this.save();
+	}
+
+	setProjectLspServerEnabled(serverName: string, enabled: boolean): void {
+		const projectSettings = structuredClone(this.projectSettings);
+		if (!projectSettings.lsp) {
+			projectSettings.lsp = {};
+		}
+		if (!projectSettings.lsp.servers) {
+			projectSettings.lsp.servers = {};
+		}
+		const currentServerSettings = projectSettings.lsp.servers[serverName] ?? {};
+		projectSettings.lsp.servers[serverName] = { ...currentServerSettings, enabled };
+		this.markProjectModified("lsp", "servers");
+		this.saveProjectSettings(projectSettings);
 	}
 
 	setProjectLspLanguageEnabled(languageId: string, enabled: boolean): void {
