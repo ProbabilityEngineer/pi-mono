@@ -76,14 +76,20 @@ describe("buildSystemPrompt", () => {
 				"if `lsp=enabled` you must run at least one concrete LSP call before finalizing the answer.",
 			);
 			expect(prompt).toContain(
-				"discover candidate files with `ast-grep` when available. Use `grep`/`find` only when `ast-grep` is unavailable or fails.",
+				"For reference-finding requests, prefer one concrete `lsp.references`/`lsp.symbols` attempt first, then move on quickly if results are empty.",
+			);
+			expect(prompt).toContain(
+				"Use `ast-grep` primarily for structural pattern matching and bulk rewrites, not as the sole completeness mechanism for symbol-reference reporting.",
+			);
+			expect(prompt).toContain(
+				"For completeness after LSP/ast-grep, run a lexical backstop query (`rg` preferred, then `grep`) over likely source files and merge/dedupe results.",
 			);
 			expect(prompt).toContain("If `ast-grep=available`, use it for bulk structural rewrites across many files.");
 			expect(prompt).toContain(
 				"After discovery for semantic tasks, run `lsp.symbols` on a concrete file path (not a directory), then use position-based LSP actions as needed.",
 			);
 			expect(prompt).toContain(
-				"If LSP returns no result, retry once with corrected position/context, then fall back to non-LSP tools.",
+				"If LSP returns no result or an indexing error, do not keep retrying. Continue with non-LSP tools and ensure lexical backstop coverage before finalizing.",
 			);
 			expect(prompt).not.toContain("transition to LSP as early as possible");
 			expect(prompt).not.toContain("Quick anti-patterns to avoid:");
