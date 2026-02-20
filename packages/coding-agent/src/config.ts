@@ -230,6 +230,11 @@ export function getPromptsDir(): string {
 	return join(getAgentDir(), "prompts");
 }
 
+/** Get path to built-in bundled prompt templates directory */
+export function getBundledPromptsDir(): string {
+	return join(getPackageDir(), "prompts");
+}
+
 /** Get path to sessions directory */
 export function getSessionsDir(): string {
 	return join(getAgentDir(), "sessions");

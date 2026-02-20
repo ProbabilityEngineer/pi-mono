@@ -91,6 +91,22 @@ Prompt content.`,
 			expect(prompts.some((p) => p.name === "test-prompt")).toBe(true);
 		});
 
+		it("should include bundled prompt templates by default", async () => {
+			const loader = new DefaultResourceLoader({ cwd, agentDir });
+			await loader.reload();
+
+			const { prompts } = loader.getPrompts();
+			expect(prompts.some((p) => p.name === "capability-aware-coding")).toBe(true);
+		});
+
+		it("should not include bundled prompt templates when noPromptTemplates is true", async () => {
+			const loader = new DefaultResourceLoader({ cwd, agentDir, noPromptTemplates: true });
+			await loader.reload();
+
+			const { prompts } = loader.getPrompts();
+			expect(prompts.some((p) => p.name === "capability-aware-coding")).toBe(false);
+		});
+
 		it("should honor overrides for auto-discovered resources", async () => {
 			const settingsManager = SettingsManager.inMemory();
 			settingsManager.setExtensionPaths(["-extensions/disabled.ts"]);
