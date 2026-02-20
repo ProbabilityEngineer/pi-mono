@@ -134,6 +134,192 @@ process.stdin.on("data", (chunk) => {
 	return { cwd, filePath };
 }
 
+function createStartupFallbackFixture(): { cwd: string; filePath: string } {
+	const cwd = mkdtempSync(join(tmpdir(), "lsp-api-test-"));
+	createdDirs.push(cwd);
+	const filePath = join(cwd, "index.ts");
+	writeFileSync(filePath, "const value = 1;\n");
+
+	const healthyServerPath = join(cwd, "healthy-lsp-server.cjs");
+	const healthyServerSource = `
+let buffer = "";
+function writeMessage(payload) {
+  const text = JSON.stringify(payload);
+  process.stdout.write("Content-Length: " + Buffer.byteLength(text, "utf8") + "\\r\\n\\r\\n" + text);
+}
+function readMessage() {
+  const headerEnd = buffer.indexOf("\\r\\n\\r\\n");
+  if (headerEnd < 0) return null;
+  const header = buffer.slice(0, headerEnd);
+  const match = /Content-Length:\\s*(\\d+)/i.exec(header);
+  if (!match) return null;
+  const length = Number.parseInt(match[1], 10);
+  const messageStart = headerEnd + 4;
+  const messageEnd = messageStart + length;
+  if (buffer.length < messageEnd) return null;
+  const body = buffer.slice(messageStart, messageEnd);
+  buffer = buffer.slice(messageEnd);
+  return JSON.parse(body);
+}
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  buffer += chunk;
+  let message = readMessage();
+  while (message) {
+    if (message.method === "initialize") {
+      writeMessage({ jsonrpc: "2.0", id: message.id, result: { capabilities: {} } });
+    } else if (message.method === "textDocument/hover") {
+      writeMessage({ jsonrpc: "2.0", id: message.id, result: { contents: { kind: "markdown", value: "healthy hover" } } });
+    } else if (message.id !== undefined) {
+      writeMessage({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "unknown method" } });
+    }
+    message = readMessage();
+  }
+});
+`;
+	writeFileSync(healthyServerPath, healthyServerSource, "utf8");
+
+	const lspConfigPath = join(cwd, "lsp.json");
+	writeFileSync(
+		lspConfigPath,
+		JSON.stringify(
+			{
+				servers: {
+					"aa-failing-server": {
+						command: process.execPath,
+						args: ["-e", "process.exit(1)"],
+						languages: ["typescript"],
+					},
+					"zz-healthy-server": {
+						command: process.execPath,
+						args: [healthyServerPath],
+						languages: ["typescript"],
+					},
+				},
+			},
+			null,
+			2,
+		),
+	);
+
+	return { cwd, filePath };
+}
+
+function createRuntimeFallbackFixture(): { cwd: string; filePath: string } {
+	const cwd = mkdtempSync(join(tmpdir(), "lsp-api-test-"));
+	createdDirs.push(cwd);
+	const filePath = join(cwd, "index.ts");
+	writeFileSync(filePath, "const value = 1;\n");
+
+	const crashyServerPath = join(cwd, "crashy-lsp-server.cjs");
+	const crashyServerSource = `
+let buffer = "";
+let hoverCount = 0;
+function writeMessage(payload) {
+  const text = JSON.stringify(payload);
+  process.stdout.write("Content-Length: " + Buffer.byteLength(text, "utf8") + "\\r\\n\\r\\n" + text);
+}
+function readMessage() {
+  const headerEnd = buffer.indexOf("\\r\\n\\r\\n");
+  if (headerEnd < 0) return null;
+  const header = buffer.slice(0, headerEnd);
+  const match = /Content-Length:\\s*(\\d+)/i.exec(header);
+  if (!match) return null;
+  const length = Number.parseInt(match[1], 10);
+  const messageStart = headerEnd + 4;
+  const messageEnd = messageStart + length;
+  if (buffer.length < messageEnd) return null;
+  const body = buffer.slice(messageStart, messageEnd);
+  buffer = buffer.slice(messageEnd);
+  return JSON.parse(body);
+}
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  buffer += chunk;
+  let message = readMessage();
+  while (message) {
+    if (message.method === "initialize") {
+      writeMessage({ jsonrpc: "2.0", id: message.id, result: { capabilities: {} } });
+    } else if (message.method === "textDocument/hover") {
+      hoverCount += 1;
+      if (hoverCount === 1) {
+        process.exit(1);
+      }
+      writeMessage({ jsonrpc: "2.0", id: message.id, result: { contents: { kind: "markdown", value: "crashy hover" } } });
+    } else if (message.id !== undefined) {
+      writeMessage({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "unknown method" } });
+    }
+    message = readMessage();
+  }
+});
+`;
+	writeFileSync(crashyServerPath, crashyServerSource, "utf8");
+
+	const healthyServerPath = join(cwd, "healthy-lsp-server.cjs");
+	const healthyServerSource = `
+let buffer = "";
+function writeMessage(payload) {
+  const text = JSON.stringify(payload);
+  process.stdout.write("Content-Length: " + Buffer.byteLength(text, "utf8") + "\\r\\n\\r\\n" + text);
+}
+function readMessage() {
+  const headerEnd = buffer.indexOf("\\r\\n\\r\\n");
+  if (headerEnd < 0) return null;
+  const header = buffer.slice(0, headerEnd);
+  const match = /Content-Length:\\s*(\\d+)/i.exec(header);
+  if (!match) return null;
+  const length = Number.parseInt(match[1], 10);
+  const messageStart = headerEnd + 4;
+  const messageEnd = messageStart + length;
+  if (buffer.length < messageEnd) return null;
+  const body = buffer.slice(messageStart, messageEnd);
+  buffer = buffer.slice(messageEnd);
+  return JSON.parse(body);
+}
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
+  buffer += chunk;
+  let message = readMessage();
+  while (message) {
+    if (message.method === "initialize") {
+      writeMessage({ jsonrpc: "2.0", id: message.id, result: { capabilities: {} } });
+    } else if (message.method === "textDocument/hover") {
+      writeMessage({ jsonrpc: "2.0", id: message.id, result: { contents: { kind: "markdown", value: "healthy hover" } } });
+    } else if (message.id !== undefined) {
+      writeMessage({ jsonrpc: "2.0", id: message.id, error: { code: -32601, message: "unknown method" } });
+    }
+    message = readMessage();
+  }
+});
+`;
+	writeFileSync(healthyServerPath, healthyServerSource, "utf8");
+
+	const lspConfigPath = join(cwd, "lsp.json");
+	writeFileSync(
+		lspConfigPath,
+		JSON.stringify(
+			{
+				servers: {
+					"aa-crashy-server": {
+						command: process.execPath,
+						args: [crashyServerPath],
+						languages: ["typescript"],
+					},
+					"zz-healthy-server": {
+						command: process.execPath,
+						args: [healthyServerPath],
+						languages: ["typescript"],
+					},
+				},
+			},
+			null,
+			2,
+		),
+	);
+
+	return { cwd, filePath };
+}
+
 afterEach(() => {
 	shutdownAll();
 	for (const dir of createdDirs.splice(0)) {
@@ -197,5 +383,21 @@ describe("lsp api edit operations", () => {
 		const formatted = await lspFormatDocument({ cwd, filePath, apply: false });
 		expect(formatted.changed).toBe(true);
 		expect(formatted.applied).toBe(false);
+	});
+});
+
+describe("lsp api server failure isolation", () => {
+	it("falls back when the preferred server fails during startup", async () => {
+		const { cwd, filePath } = createStartupFallbackFixture();
+		const hover = await lspHover({ cwd, filePath, line: 1, column: 1 });
+		expect(hover.server).toBe("zz-healthy-server");
+		expect(hover.contents).toContain("healthy hover");
+	});
+
+	it("falls back when the preferred server crashes at runtime", async () => {
+		const { cwd, filePath } = createRuntimeFallbackFixture();
+		const hover = await lspHover({ cwd, filePath, line: 1, column: 1 });
+		expect(hover.server).toBe("zz-healthy-server");
+		expect(hover.contents).toContain("healthy hover");
 	});
 });
