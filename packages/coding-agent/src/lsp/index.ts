@@ -1,3 +1,4 @@
+export { buildAgentGuidedManualInstallPrompt } from "./agent-guided-install.js";
 export {
 	type LspDiagnosticsInput,
 	type LspFormatInput,
