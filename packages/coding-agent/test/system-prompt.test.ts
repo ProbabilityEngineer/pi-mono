@@ -69,79 +69,22 @@ describe("buildSystemPrompt", () => {
 			});
 
 			expect(prompt).toContain("Use capability-aware tool selection for this task.");
-			expect(prompt).toContain("Use ast-grep for syntax-aware structural queries and bulk code-shape matching.");
-			expect(prompt).toContain("never send empty or placeholder actions.");
 			expect(prompt).toContain(
-				"Progress gate: each tool call must add new information; if two consecutive calls add no new information, switch strategy and finish.",
+				"Discovery-first: locate candidate source files before semantic calls (`rg`/`find`, or `ast-grep` for structural discovery).",
 			);
 			expect(prompt).toContain(
-				"Bounded search: cap lookup/extraction attempts (for example, max 3 calls) before summarizing best available evidence.",
-			);
-			expect(prompt).toContain("Evidence-first output: end with a compact deduped evidence list.");
-			expect(prompt).toContain(
-				"Early stop on success: if a tool call returns an evidence-complete result set for the request, stop querying and finalize.",
+				"For semantic lookup, run at most one anchored LSP call (`symbols|references|definition|hover` as appropriate).",
 			);
 			expect(prompt).toContain(
-				"Query dedupe: do not repeat identical or near-identical queries in the same turn once they have already succeeded.",
-			);
-			expect(prompt).toContain(
-				"For semantic lookup tasks, use discovery-first order: locate concrete source files first (`rg`/`find`, or `ast-grep` for structural discovery), then run one anchored file-scoped LSP call when `lsp=enabled`.",
-			);
-			expect(prompt).toContain(
-				"For semantic lookup/completeness-required tasks, do not call `lsp.status` unless the user explicitly asks for LSP/server diagnostics.",
-			);
-			expect(prompt).toContain(
-				"For semantic lookup where completeness matters, do at most one concrete `lsp.references`/`lsp.symbols` attempt after anchoring, then move on quickly if results are empty.",
-			);
-			expect(prompt).toContain(
-				"Tool budget for lookup tasks: at most one LSP attempt, at most one ast-grep structural probe, and one lexical backstop before finalizing.",
-			);
-			expect(prompt).toContain(
-				"Use `ast-grep` primarily for structural pattern matching and bulk rewrites, not as the sole completeness mechanism for symbol-reference reporting.",
-			);
-			expect(prompt).toContain(
-				"For completeness-required reporting, run a lexical backstop query (`rg` preferred, then `grep`) over likely source files and merge/dedupe results.",
-			);
-			expect(prompt).toContain(
-				"For semantic-lookup fallback, run one canonical lexical query with line numbers (`rg -n` preferred), then dedupe and finalize; do not rerun equivalent shell queries.",
-			);
-			expect(prompt).toContain(
-				'For extraction/listing requests (e.g., "find/list all declarations/usages"), stop after collecting sufficient evidence lines; avoid exploratory full-file reads unless a matched line lacks needed context.',
-			);
-			expect(prompt).toContain(
-				"If a tool already returns `file:line` plus matched line text, use that output directly instead of re-reading files for the same evidence.",
-			);
-			expect(prompt).toContain(
-				"Pattern-retry discipline: for the same search intent, do at most two pattern attempts per tool, then switch strategy.",
+				"If the LSP call is empty/error or low-confidence, stop LSP retries and run one canonical lexical backstop query (`rg -n` preferred), then dedupe and finalize.",
 			);
 			expect(prompt).toContain("If `ast-grep=available`, use it for bulk structural rewrites across many files.");
-			expect(prompt).toContain(
-				"Standardize completeness backstop to one canonical lexical query for the symbol set, then merge/dedupe results.",
-			);
-			expect(prompt).toContain(
-				"If LSP returns no result or an indexing error, do not keep retrying. Continue with non-LSP tools and ensure lexical backstop coverage before finalizing.",
-			);
-			expect(prompt).toContain(
-				"If the first LSP call has low-confidence context (unanchored position, wrong file, or obvious mismatch), skip further LSP retries and move to the backstop.",
-			);
-			expect(prompt).toContain(
-				"Target-position sanity: do not run `lsp.definition`/`lsp.references` on an unanchored declaration position. Anchor the symbol token position first (for example via file-scoped symbols), or skip to lexical backstop.",
-			);
-			expect(prompt).toContain(
-				"For symbol-location requests, if file-scoped `lsp.symbols` returns an exact symbol match, return immediately with that `file:line: matched line` evidence and stop additional tool calls.",
-			);
-			expect(prompt).toContain(
-				"If diagnostics are explicitly requested, use `lsp.status` at most once per turn; it must not block direct file-based LSP calls.",
-			);
-			expect(prompt).toContain("Default to concise evidence output:");
-			expect(prompt).toContain("one compact list of `file:line` entries with short snippets");
-			expect(prompt).toContain("one optional total-count line");
-			expect(prompt).toContain("no long narrative analysis unless the user asks for it");
-			expect(prompt).toContain("For semantic lookup answers, when fallback evidence is used, return only:");
-			expect(prompt).toContain("requested symbol definition location (if requested)");
-			expect(prompt).toContain("deduped reference list (`file:line: matched line`)");
-			expect(prompt).not.toContain("transition to LSP as early as possible");
-			expect(prompt).not.toContain("Quick anti-patterns to avoid:");
+			expect(prompt).toContain("Output concise evidence only:");
+			expect(prompt).toContain("`file:line: matched line`");
+			expect(prompt).toContain("optional total-count line");
+			expect(prompt).toContain("no long narrative analysis unless asked.");
+			expect(prompt).toContain("For stricter step-by-step guardrails, use `/capability-aware-coding-detailed`.");
+			expect(prompt).not.toContain("Progress gate:");
 			expect(prompt).not.toContain("If `ast-grep=unavailable`, do not plan around `ast-grep`");
 		});
 
