@@ -16,6 +16,7 @@ const toolDescriptions: Record<string, string> = {
 	edit: "Make surgical edits to files (find exact text and replace)",
 	write: "Create or overwrite files",
 	lsp: "Run language intelligence queries (hover, definition, references, symbols)",
+	"ast-grep": "Run syntax-aware structural search and rewrites (if installed)",
 	grep: "Search file contents for patterns (respects .gitignore)",
 	find: "Find files by glob pattern (respects .gitignore)",
 	ls: "List directory contents",
@@ -24,7 +25,7 @@ const toolDescriptions: Record<string, string> = {
 export interface BuildSystemPromptOptions {
 	/** Custom system prompt (replaces default). */
 	customPrompt?: string;
-	/** Tools to include in prompt. Default: [read, bash, edit, write] */
+	/** Tools to include in prompt. Default: [read, bash, edit, write, lsp, ast-grep] */
 	selectedTools?: string[];
 	/** Text to append to system prompt. */
 	appendSystemPrompt?: string;
@@ -156,7 +157,9 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
 	const examplesPath = getExamplesPath();
 
 	// Build tools list based on selected tools (only built-in tools with known descriptions)
-	const tools = (selectedTools || ["read", "bash", "edit", "write"]).filter((t) => t in toolDescriptions);
+	const tools = (selectedTools || ["read", "bash", "edit", "write", "lsp", "ast-grep"]).filter(
+		(t) => t in toolDescriptions,
+	);
 	const toolsList = tools.length > 0 ? tools.map((t) => `- ${t}: ${toolDescriptions[t]}`).join("\n") : "(none)";
 
 	// Build guidelines based on which tools are actually available
@@ -170,6 +173,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
 	const hasLs = tools.includes("ls");
 	const hasRead = tools.includes("read");
 	const hasLsp = tools.includes("lsp");
+	const hasAstGrep = tools.includes("ast-grep");
 
 	// File exploration guidelines
 	if (hasBash && !hasGrep && !hasFind && !hasLs) {
@@ -198,6 +202,9 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
 		guidelinesList.push(
 			"Use LSP for semantic navigation when available; otherwise fall back to read/grep/find workflows.",
 		);
+	}
+	if (hasAstGrep) {
+		guidelinesList.push("Use ast-grep for syntax-aware structural queries and bulk code-shape matching.");
 	}
 
 	// Output guideline (only when actually writing or executing)
