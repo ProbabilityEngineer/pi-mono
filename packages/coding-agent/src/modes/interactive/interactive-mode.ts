@@ -3167,6 +3167,15 @@ export class InteractiveMode {
 						this.showError(`Failed to uninstall ${serverName}: ${result.error ?? "unknown error"}`);
 						return false;
 					},
+					onLspServerShowManualSetupInstructions: (serverName) => {
+						const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
+						if (!server) {
+							this.showError(`Unknown LSP server: ${serverName}`);
+							return;
+						}
+						const remediation = getManualRemediation(serverName);
+						this.showWarning(`Manual setup for ${serverName}: ${remediation}`);
+					},
 					onLspServerAttemptAgentGuidedInstall: (serverName) => {
 						if (this.session.isStreaming || this.session.isCompacting) {
 							this.showWarning("Wait for the current operation to finish before running install guidance.");
