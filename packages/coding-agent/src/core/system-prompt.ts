@@ -58,18 +58,32 @@ function stripFrontmatter(markdown: string): string {
 	return markdown.slice(secondFence + 4).trim();
 }
 
-function loadCapabilityPolicyTemplate(astGrepAvailable: boolean): string | undefined {
-	const promptPath = resolve(dirname(fileURLToPath(import.meta.url)), "../../prompts/capability-aware-coding.md");
+function loadPromptTemplate(fileName: string): string | undefined {
+	const promptPath = resolve(dirname(fileURLToPath(import.meta.url)), `../../prompts/${fileName}`);
 	if (!existsSync(promptPath)) {
 		return undefined;
 	}
-	const raw = stripFrontmatter(readFileSync(promptPath, "utf-8"));
-	const lines = raw
-		.split("\n")
-		.filter((line) =>
-			astGrepAvailable ? !line.includes("If `ast-grep=unavailable`,") : !line.includes("If `ast-grep=available`,"),
-		);
-	return lines.join("\n").trim();
+	return stripFrontmatter(readFileSync(promptPath, "utf-8"));
+}
+
+function loadCapabilityPolicyTemplate(astGrepAvailable: boolean): string | undefined {
+	const basePolicy = loadPromptTemplate("capability-aware-coding.md");
+	if (!basePolicy) {
+		return undefined;
+	}
+	const astGrepPolicy = loadPromptTemplate("capability-aware-ast-grep.md");
+	const astGrepLines = astGrepPolicy
+		? astGrepPolicy
+				.split("\n")
+				.filter((line) =>
+					astGrepAvailable
+						? !line.includes("If `ast-grep=unavailable`,")
+						: !line.includes("If `ast-grep=available`,"),
+				)
+		: [];
+
+	const combined = [basePolicy.trim(), ...astGrepLines.filter((line) => line.trim().length > 0)].join("\n");
+	return combined.trim();
 }
 
 /** Build the system prompt with tools, guidelines, and context */
