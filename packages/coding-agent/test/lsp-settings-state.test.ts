@@ -30,6 +30,7 @@ describe("lsp settings state", () => {
 				enabled: false,
 				installed: false,
 				canInstall: false,
+				manualRemediation: undefined,
 			},
 			{
 				name: "sourcekit-lsp",
@@ -37,6 +38,7 @@ describe("lsp settings state", () => {
 				enabled: undefined,
 				installed: true,
 				canInstall: false,
+				manualRemediation: undefined,
 			},
 		]);
 	});
@@ -63,6 +65,30 @@ describe("lsp settings state", () => {
 			enabled: undefined,
 			installed: true,
 			canInstall: true,
+			manualRemediation: undefined,
 		});
+	});
+
+	it("surfaces manual remediation for unsupported installers", () => {
+		const servers: Record<string, ResolvedLspServer> = {
+			"sourcekit-lsp": {
+				name: "sourcekit-lsp",
+				command: "sourcekit-lsp",
+				languages: ["swift"],
+				installer: {
+					kind: "unsupported",
+					remediation: "Install command line tools",
+				},
+			},
+		};
+		const result = buildLspServerSettingsState({
+			cwd: "/tmp",
+			resolvedServers: servers,
+			getPersistedState: () => ({}),
+			commandAvailable: () => true,
+		});
+
+		expect(result[0]?.manualRemediation).toBe("Install command line tools");
+		expect(result[0]?.canInstall).toBe(false);
 	});
 });
