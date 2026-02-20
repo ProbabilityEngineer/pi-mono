@@ -97,6 +97,7 @@ Prompt content.`,
 
 			const { prompts } = loader.getPrompts();
 			expect(prompts.some((p) => p.name === "capability-aware-coding")).toBe(true);
+			expect(prompts.some((p) => p.name === "capability-aware-lsp-playbook")).toBe(true);
 		});
 
 		it("should not include bundled prompt templates when noPromptTemplates is true", async () => {
