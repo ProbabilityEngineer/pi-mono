@@ -72,6 +72,13 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain("Use ast-grep for syntax-aware structural queries and bulk code-shape matching.");
 			expect(prompt).toContain("never send empty or placeholder actions.");
 			expect(prompt).toContain(
+				"Progress gate: each tool call must add new information; if two consecutive calls add no new information, switch strategy and finish.",
+			);
+			expect(prompt).toContain(
+				"Bounded search: cap lookup/extraction attempts (for example, max 3 calls) before summarizing best available evidence.",
+			);
+			expect(prompt).toContain("Evidence-first output: end with a compact deduped evidence list.");
+			expect(prompt).toContain(
 				"For semantic lookup tasks, use discovery-first order: locate concrete source files first (`rg`/`find`, or `ast-grep` for structural discovery), then run one anchored file-scoped LSP call when `lsp=enabled`.",
 			);
 			expect(prompt).toContain(
