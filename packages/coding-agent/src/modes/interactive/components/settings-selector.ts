@@ -70,7 +70,6 @@ export interface SettingsCallbacks {
 	onLspServerEnabledChange: (serverName: string, enabled: boolean) => void;
 	onLspServerInstall: (serverName: string) => Promise<boolean> | boolean;
 	onLspServerUninstall: (serverName: string) => Promise<boolean> | boolean;
-	onLspServerShowManualSetupInstructions: (serverName: string) => Promise<void> | void;
 	onLspServerAttemptAgentGuidedInstall: (serverName: string) => Promise<void> | void;
 	onEnableSkillCommandsChange: (enabled: boolean) => void;
 	onSteeringModeChange: (mode: "all" | "one-at-a-time") => void;
@@ -105,18 +104,11 @@ export function getLspServerActionOptions(server: LspServerSettingEntry): Select
 			{ value: "uninstall", label: "Uninstall", description: "Run uninstall command and disable server" },
 		);
 	} else {
-		options.push(
-			{
-				value: "show-manual-setup-instructions",
-				label: "Show manual setup instructions",
-				description: "View maintainer-provided install steps",
-			},
-			{
-				value: "attempt-agent-guided-manual-install",
-				label: "Attempt agent-guided setup",
-				description: "Ask the agent to guide setup for this server",
-			},
-		);
+		options.push({
+			value: "attempt-agent-guided-manual-install",
+			label: "Attempt agent-guided setup",
+			description: "Ask the agent to guide setup for this server",
+		});
 	}
 	options.push({ value: "back", label: "Back", description: "Return to server list" });
 	return options;
@@ -195,7 +187,6 @@ class LspServerSubmenu extends Container {
 			| "onLspServerEnabledChange"
 			| "onLspServerInstall"
 			| "onLspServerUninstall"
-			| "onLspServerShowManualSetupInstructions"
 			| "onLspServerAttemptAgentGuidedInstall"
 		>,
 		private onDone: () => void,
@@ -275,9 +266,6 @@ class LspServerSubmenu extends Container {
 				}
 				if (item.value === "attempt-agent-guided-manual-install") {
 					await this.callbacks.onLspServerAttemptAgentGuidedInstall(server.name);
-				}
-				if (item.value === "show-manual-setup-instructions") {
-					await this.callbacks.onLspServerShowManualSetupInstructions(server.name);
 				}
 				this.renderServerActions(server);
 			})();
@@ -505,7 +493,6 @@ export class SettingsSelectorComponent extends Container {
 						onLspServerEnabledChange: callbacks.onLspServerEnabledChange,
 						onLspServerInstall: callbacks.onLspServerInstall,
 						onLspServerUninstall: callbacks.onLspServerUninstall,
-						onLspServerShowManualSetupInstructions: callbacks.onLspServerShowManualSetupInstructions,
 						onLspServerAttemptAgentGuidedInstall: callbacks.onLspServerAttemptAgentGuidedInstall,
 					},
 					() => done(),
