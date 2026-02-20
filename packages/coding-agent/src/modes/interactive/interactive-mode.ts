@@ -3174,12 +3174,16 @@ export class InteractiveMode {
 							return;
 						}
 						const remediation = getManualRemediation(serverName);
+						const prompt = buildAgentGuidedManualInstallPrompt(server.name, server.command, remediation);
 						this.showStatus(
 							[
 								`Manual setup instructions (${serverName}):`,
 								`1. ${remediation}`,
 								"2. Verify the server binary is available on PATH.",
 								"3. Return to /settings > LSP servers and retry.",
+								"",
+								'Exact prompt used by "Attempt agent-guided setup":',
+								prompt,
 							].join("\n"),
 						);
 					},
