@@ -71,7 +71,7 @@ describe("ast-grep tool", () => {
 			path: "diskfluffer",
 			language: "swift",
 		});
-		expect(getText(result)).toContain("scan --pattern AppState");
+		expect(getText(result)).toContain("run --pattern AppState");
 		expect(getText(result)).toContain("--lang swift");
 	});
 });

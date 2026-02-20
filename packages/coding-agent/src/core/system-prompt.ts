@@ -202,6 +202,9 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
 		guidelinesList.push(
 			"Use LSP for semantic navigation when available; otherwise fall back to read/grep/find workflows.",
 		);
+		guidelinesList.push(
+			"For requests about references/definitions/hover/symbols/rename/diagnostics, start with a concrete LSP call before text search.",
+		);
 	}
 	if (hasAstGrep) {
 		guidelinesList.push("Use ast-grep for syntax-aware structural queries and bulk code-shape matching.");

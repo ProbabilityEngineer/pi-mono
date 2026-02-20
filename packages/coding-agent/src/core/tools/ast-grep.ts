@@ -159,10 +159,11 @@ export function createAstGrepTool(cwd: string, options?: AstGrepToolOptions): Ag
 			}
 
 			const targetPath = resolveToCwd(path || ".", cwd);
-			const args = ["scan", "--pattern", pattern, targetPath];
+			const args = ["run", "--pattern", pattern];
 			if (language) {
 				args.push("--lang", language);
 			}
+			args.push(targetPath);
 
 			const result = await ops.exec(command, args, cwd, timeout, signal);
 			if (result.exitCode !== 0 && result.exitCode !== 1) {
