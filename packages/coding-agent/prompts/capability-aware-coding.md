@@ -17,6 +17,8 @@ Policy:
   - Progress gate: each tool call must add new information; if two consecutive calls add no new information, switch strategy and finish.
   - Bounded search: cap lookup/extraction attempts (for example, max 3 calls) before summarizing best available evidence.
   - Evidence-first output: end with a compact deduped evidence list.
+  - Early stop on success: if a tool call returns an evidence-complete result set for the request, stop querying and finalize.
+  - Query dedupe: do not repeat identical or near-identical queries in the same turn once they have already succeeded.
 - For semantic lookup tasks, use discovery-first order: locate concrete source files first (`rg`/`find`, or `ast-grep` for structural discovery), then run one anchored file-scoped LSP call when `lsp=enabled`.
 - For semantic lookup/completeness-required tasks, do not call `lsp.status` unless the user explicitly asks for LSP/server diagnostics.
 - For semantic lookup where completeness matters, do at most one concrete `lsp.references`/`lsp.symbols` attempt after anchoring, then move on quickly if results are empty.
