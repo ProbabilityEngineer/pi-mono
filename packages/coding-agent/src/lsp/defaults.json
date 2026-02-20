@@ -478,7 +478,11 @@
 		"command": "sourcekit-lsp",
 		"languages": [
 			"swift"
-		]
+		],
+		"installer": {
+			"kind": "unsupported",
+			"remediation": "Install Xcode command line tools and ensure `sourcekit-lsp` is on PATH (for example: `xcode-select --install`)."
+		}
 	},
 	"swiftlint": {
 		"command": "swiftlint",
