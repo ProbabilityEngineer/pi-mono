@@ -46,5 +46,31 @@ describe("buildSystemPrompt", () => {
 
 			expect(prompt).toContain("- lsp:");
 		});
+
+		test("auto-injects capability policy with ast-grep available guidance", () => {
+			const prompt = buildSystemPrompt({
+				contextFiles: [],
+				skills: [],
+				astGrepAvailable: true,
+			});
+
+			expect(prompt).toContain("Use capability-aware tool selection for this task.");
+			expect(prompt).toContain("If `ast-grep=available`, use it for bulk structural rewrites across many files.");
+			expect(prompt).not.toContain("If `ast-grep=unavailable`, do not plan around `ast-grep`");
+		});
+
+		test("auto-injects capability policy with ast-grep unavailable guidance", () => {
+			const prompt = buildSystemPrompt({
+				contextFiles: [],
+				skills: [],
+				astGrepAvailable: false,
+			});
+
+			expect(prompt).toContain("Use capability-aware tool selection for this task.");
+			expect(prompt).toContain(
+				"If `ast-grep=unavailable`, do not plan around `ast-grep`; use standard tools instead.",
+			);
+			expect(prompt).not.toContain("If `ast-grep=available`, use it for bulk structural rewrites");
+		});
 	});
 });
