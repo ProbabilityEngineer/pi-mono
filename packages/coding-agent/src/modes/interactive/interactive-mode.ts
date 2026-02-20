@@ -3174,7 +3174,14 @@ export class InteractiveMode {
 							return;
 						}
 						const remediation = getManualRemediation(serverName);
-						this.showWarning(`Manual setup for ${serverName}: ${remediation}`);
+						this.showStatus(
+							[
+								`Manual setup instructions (${serverName}):`,
+								`1. ${remediation}`,
+								"2. Verify the server binary is available on PATH.",
+								"3. Return to /settings > LSP servers and retry.",
+							].join("\n"),
+						);
 					},
 					onLspServerAttemptAgentGuidedInstall: (serverName) => {
 						if (this.session.isStreaming || this.session.isCompacting) {
