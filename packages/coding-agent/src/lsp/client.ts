@@ -238,12 +238,18 @@ function startMessageReader(client: LspClient): void {
 				routeMessage(client, parsed.message);
 				parsed = parseSingleMessage(client.messageBuffer);
 			}
-		} catch {
+		} catch (error) {
+			terminationReason = error instanceof Error ? error : new Error(String(error));
 			onTerminated();
 		}
 	};
 
 	let terminated = false;
+	let terminationReason: Error | null = null;
+	const onProcessError = (error: Error): void => {
+		terminationReason = error;
+		onTerminated();
+	};
 	const onTerminated = (): void => {
 		if (terminated) {
 			return;
@@ -254,14 +260,16 @@ function startMessageReader(client: LspClient): void {
 		client.transport.proc.stdout.off("end", onTerminated);
 		client.transport.proc.stdout.off("error", onTerminated);
 		client.transport.proc.off("close", onTerminated);
+		client.transport.proc.off("error", onProcessError);
 		evictClientFromCache(client);
-		rejectPendingRequests(client, new Error("LSP connection closed"));
+		rejectPendingRequests(client, terminationReason ?? new Error("LSP connection closed"));
 	};
 
 	client.transport.proc.stdout.on("data", onData);
 	client.transport.proc.stdout.on("end", onTerminated);
 	client.transport.proc.stdout.on("error", onTerminated);
 	client.transport.proc.on("close", onTerminated);
+	client.transport.proc.on("error", onProcessError);
 }
 
 function fileToUri(filePath: string): string {

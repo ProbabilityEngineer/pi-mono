@@ -186,8 +186,7 @@ process.stdin.on("data", (chunk) => {
 			{
 				servers: {
 					"aa-failing-server": {
-						command: process.execPath,
-						args: ["-e", "process.exit(1)"],
+						command: "__missing_lsp_server_for_test__",
 						languages: ["typescript"],
 					},
 					"zz-healthy-server": {
