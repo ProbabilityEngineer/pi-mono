@@ -3167,26 +3167,6 @@ export class InteractiveMode {
 						this.showError(`Failed to uninstall ${serverName}: ${result.error ?? "unknown error"}`);
 						return false;
 					},
-					onLspServerShowManualSetupInstructions: (serverName) => {
-						const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
-						if (!server) {
-							this.showError(`Unknown LSP server: ${serverName}`);
-							return;
-						}
-						const remediation = getManualRemediation(serverName);
-						const prompt = buildAgentGuidedManualInstallPrompt(server.name, server.command, remediation);
-						this.showStatus(
-							[
-								`Manual setup instructions (${serverName}):`,
-								`1. ${remediation}`,
-								"2. Verify the server binary is available on PATH.",
-								"3. Return to /settings > LSP servers and retry.",
-								"",
-								'Exact prompt used by "Attempt agent-guided setup":',
-								prompt,
-							].join("\n"),
-						);
-					},
 					onLspServerAttemptAgentGuidedInstall: (serverName) => {
 						if (this.session.isStreaming || this.session.isCompacting) {
 							this.showWarning("Wait for the current operation to finish before running install guidance.");

@@ -14,7 +14,7 @@ describe("settings selector lsp server actions", () => {
 		expect(values).toEqual(["toggle-enabled", "install", "uninstall", "back"]);
 	});
 
-	it("shows manual setup and agent-guided actions for unsupported installers", () => {
+	it("shows only agent-guided setup for unsupported installers", () => {
 		const options = getLspServerActionOptions({
 			name: "sourcekit-lsp",
 			command: "sourcekit-lsp",
@@ -24,15 +24,8 @@ describe("settings selector lsp server actions", () => {
 			manualRemediation: "Install command line tools",
 		});
 		const values = options.map((option) => option.value);
-		expect(values).toEqual([
-			"toggle-enabled",
-			"show-manual-setup-instructions",
-			"attempt-agent-guided-manual-install",
-			"back",
-		]);
-		expect(options[1]?.label).toBe("Show manual setup instructions");
-		expect(options[2]?.label).toBe("Attempt agent-guided setup");
-		expect(options[1]?.description).toBe("View maintainer-provided install steps");
-		expect(options[2]?.description).toBe("Ask the agent to guide setup for this server");
+		expect(values).toEqual(["toggle-enabled", "attempt-agent-guided-manual-install", "back"]);
+		expect(options[1]?.label).toBe("Attempt agent-guided setup");
+		expect(options[1]?.description).toBe("Ask the agent to guide setup for this server");
 	});
 });
