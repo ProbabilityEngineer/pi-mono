@@ -56,6 +56,12 @@ describe("buildSystemPrompt", () => {
 
 			expect(prompt).toContain("Use capability-aware tool selection for this task.");
 			expect(prompt).toContain("If `ast-grep=available`, use it for bulk structural rewrites across many files.");
+			expect(prompt).toContain(
+				"lsp.definition/references/hover are position-based (file + line + column). If you only have a symbol name, use lsp.symbols first to locate position.",
+			);
+			expect(prompt).toContain(
+				"If LSP returns no result, read the nearby file region once and retry with corrected position before falling back.",
+			);
 			expect(prompt).not.toContain("If `ast-grep=unavailable`, do not plan around `ast-grep`");
 		});
 
