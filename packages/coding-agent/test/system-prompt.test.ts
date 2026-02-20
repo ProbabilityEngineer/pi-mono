@@ -71,7 +71,12 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain("Use capability-aware tool selection for this task.");
 			expect(prompt).toContain("Use ast-grep for syntax-aware structural queries and bulk code-shape matching.");
 			expect(prompt).toContain("never send empty or placeholder actions.");
-			expect(prompt).toContain("Use `lsp.status` at most once per turn.");
+			expect(prompt).toContain(
+				"Do not start semantic workflows with `lsp.status`. First locate a concrete source file path, then run a file-scoped LSP action.",
+			);
+			expect(prompt).toContain(
+				"Use `lsp.status` sparingly (at most once per turn) for diagnostics only; it is optional and should not block direct file-based LSP calls.",
+			);
 			expect(prompt).toContain(
 				"if `lsp=enabled` you must run at least one concrete LSP call before finalizing the answer.",
 			);
