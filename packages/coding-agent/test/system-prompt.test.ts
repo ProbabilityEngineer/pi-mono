@@ -57,13 +57,16 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain("Use capability-aware tool selection for this task.");
 			expect(prompt).toContain("never send empty or placeholder actions.");
 			expect(prompt).toContain("Use `lsp.status` at most once per turn.");
+			expect(prompt).toContain("discover candidate files first using `ast-grep` when available");
 			expect(prompt).toContain("If `ast-grep=available`, use it for bulk structural rewrites across many files.");
 			expect(prompt).toContain(
-				"lsp.definition/references/hover are position-based (file + line + column). If you only have a symbol name, use lsp.symbols first to locate position.",
+				"After discovery for semantic tasks, run `lsp.symbols` on a concrete file path (not a directory), then use position-based LSP actions as needed.",
 			);
 			expect(prompt).toContain(
-				"If LSP returns no result, read the nearby file region once and retry with corrected position before falling back.",
+				"If LSP returns no result, retry once with corrected position/context, then fall back to non-LSP tools.",
 			);
+			expect(prompt).not.toContain("transition to LSP as early as possible");
+			expect(prompt).not.toContain("Quick anti-patterns to avoid:");
 			expect(prompt).not.toContain("If `ast-grep=unavailable`, do not plan around `ast-grep`");
 		});
 
