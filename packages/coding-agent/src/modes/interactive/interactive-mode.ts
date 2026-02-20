@@ -69,6 +69,7 @@ import { type SessionContext, SessionManager } from "../../core/session-manager.
 import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
 import {
+	buildAgentGuidedManualInstallPrompt,
 	buildLspServerSettingsState,
 	ensureServerInstalled,
 	ensureServerUninstalled,
@@ -3167,8 +3168,19 @@ export class InteractiveMode {
 						return false;
 					},
 					onLspServerAttemptAgentGuidedInstall: (serverName) => {
+						if (this.session.isStreaming || this.session.isCompacting) {
+							this.showWarning("Wait for the current operation to finish before running install guidance.");
+							return;
+						}
+						const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
+						if (!server) {
+							this.showError(`Unknown LSP server: ${serverName}`);
+							return;
+						}
 						const remediation = getManualRemediation(serverName);
-						this.showStatus(`LSP server guidance (${serverName}): ${remediation}`);
+						const prompt = buildAgentGuidedManualInstallPrompt(server.name, server.command, remediation);
+						this.showStatus(`Attempting agent-guided manual install: ${serverName}`);
+						void this.session.prompt(prompt);
 					},
 					onEnableSkillCommandsChange: (enabled) => {
 						this.settingsManager.setEnableSkillCommands(enabled);
