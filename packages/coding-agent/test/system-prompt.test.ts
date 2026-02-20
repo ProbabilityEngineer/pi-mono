@@ -79,6 +79,12 @@ describe("buildSystemPrompt", () => {
 			);
 			expect(prompt).toContain("Evidence-first output: end with a compact deduped evidence list.");
 			expect(prompt).toContain(
+				"Early stop on success: if a tool call returns an evidence-complete result set for the request, stop querying and finalize.",
+			);
+			expect(prompt).toContain(
+				"Query dedupe: do not repeat identical or near-identical queries in the same turn once they have already succeeded.",
+			);
+			expect(prompt).toContain(
 				"For semantic lookup tasks, use discovery-first order: locate concrete source files first (`rg`/`find`, or `ast-grep` for structural discovery), then run one anchored file-scoped LSP call when `lsp=enabled`.",
 			);
 			expect(prompt).toContain(
