@@ -3230,7 +3230,7 @@ export class InteractiveMode {
 						this.showError(`Failed to uninstall ${serverName}: ${result.error ?? "unknown error"}`);
 						return false;
 					},
-					onLspServerShowManualGuidance: (serverName) => {
+					onLspServerAttemptAgentGuidedInstall: (serverName) => {
 						const remediation = getManualRemediation(serverName);
 						this.showStatus(`LSP server guidance (${serverName}): ${remediation}`);
 					},
