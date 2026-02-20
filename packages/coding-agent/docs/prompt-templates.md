@@ -71,7 +71,8 @@ Usage: `/component Button "onClick handler" "disabled support"`
 Pi ships a capability-aware policy template at `prompts/capability-aware-coding.md`.
 
 - Invoke it with `/capability-aware-coding`.
-- It standardizes capability checks for:
+- It provides a short core policy for:
   - `ast-grep`: `available|unavailable`
   - `lsp`: `enabled|disabled`
   - per-language LSP server: `installed|missing|auto-installable`
+- For a stricter long-form playbook, invoke `/capability-aware-coding-detailed`.
