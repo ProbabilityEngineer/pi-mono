@@ -190,6 +190,7 @@ export {
 	type CreateAgentSessionResult,
 	// Factory
 	createAgentSession,
+	createAstGrepTool,
 	createBashTool,
 	// Tool factories (for custom cwd)
 	createCodingTools,
@@ -246,6 +247,10 @@ export {
 } from "./core/skills.js";
 // Tools
 export {
+	type AstGrepToolDetails,
+	type AstGrepToolInput,
+	type AstGrepToolOptions,
+	astGrepTool,
 	type BashOperations,
 	type BashSpawnContext,
 	type BashSpawnHook,
