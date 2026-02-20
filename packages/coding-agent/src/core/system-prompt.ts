@@ -2,6 +2,10 @@
  * System prompt construction and project context loading
  */
 
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getDocsPath, getExamplesPath, getReadmePath } from "../config.js";
 import { formatSkillsForPrompt, type Skill } from "./skills.js";
 
@@ -30,6 +34,42 @@ export interface BuildSystemPromptOptions {
 	contextFiles?: Array<{ path: string; content: string }>;
 	/** Pre-loaded skills. */
 	skills?: Skill[];
+	/** Override ast-grep availability detection. */
+	astGrepAvailable?: boolean;
+}
+
+function detectAstGrepAvailability(): boolean {
+	const command = process.platform === "win32" ? "where" : "which";
+	const hasSg = spawnSync(command, ["sg"], { stdio: "ignore" }).status === 0;
+	if (hasSg) {
+		return true;
+	}
+	return spawnSync(command, ["ast-grep"], { stdio: "ignore" }).status === 0;
+}
+
+function stripFrontmatter(markdown: string): string {
+	if (!markdown.startsWith("---")) {
+		return markdown.trim();
+	}
+	const secondFence = markdown.indexOf("\n---", 3);
+	if (secondFence === -1) {
+		return markdown.trim();
+	}
+	return markdown.slice(secondFence + 4).trim();
+}
+
+function loadCapabilityPolicyTemplate(astGrepAvailable: boolean): string | undefined {
+	const promptPath = resolve(dirname(fileURLToPath(import.meta.url)), "../../prompts/capability-aware-coding.md");
+	if (!existsSync(promptPath)) {
+		return undefined;
+	}
+	const raw = stripFrontmatter(readFileSync(promptPath, "utf-8"));
+	const lines = raw
+		.split("\n")
+		.filter((line) =>
+			astGrepAvailable ? !line.includes("If `ast-grep=unavailable`,") : !line.includes("If `ast-grep=available`,"),
+		);
+	return lines.join("\n").trim();
 }
 
 /** Build the system prompt with tools, guidelines, and context */
@@ -41,8 +81,11 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
 		cwd,
 		contextFiles: providedContextFiles,
 		skills: providedSkills,
+		astGrepAvailable,
 	} = options;
 	const resolvedCwd = cwd ?? process.cwd();
+	const resolvedAstGrepAvailability = astGrepAvailable ?? detectAstGrepAvailability();
+	const capabilityPolicy = loadCapabilityPolicyTemplate(resolvedAstGrepAvailability);
 
 	const now = new Date();
 	const dateTime = now.toLocaleString("en-US", {
@@ -56,7 +99,10 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
 		timeZoneName: "short",
 	});
 
-	const appendSection = appendSystemPrompt ? `\n\n${appendSystemPrompt}` : "";
+	const appendParts = [appendSystemPrompt, capabilityPolicy].filter(
+		(part): part is string => !!part && part.trim().length > 0,
+	);
+	const appendSection = appendParts.length > 0 ? `\n\n${appendParts.join("\n\n")}` : "";
 
 	const contextFiles = providedContextFiles ?? [];
 	const skills = providedSkills ?? [];
