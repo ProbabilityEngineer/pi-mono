@@ -137,8 +137,9 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		// Load models and do initial render
 		this.loadModels().then(() => {
 			if (initialSearchInput) {
-				this.filterModels(initialSearchInput);
+				this.filterModels(initialSearchInput, true);
 			} else {
+				this.selectCurrentModelIfVisible();
 				this.updateList();
 			}
 			// Request re-render after models are loaded
@@ -187,6 +188,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		);
 		this.activeModels = this.scope === "scoped" ? this.scopedModelItems : this.allModels;
 		this.filteredModels = this.activeModels;
+		this.selectCurrentModelIfVisible();
 		this.selectedIndex = Math.min(this.selectedIndex, Math.max(0, this.filteredModels.length - 1));
 	}
 
@@ -242,19 +244,28 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		if (this.scope === scope) return;
 		this.scope = scope;
 		this.activeModels = this.scope === "scoped" ? this.scopedModelItems : this.allModels;
-		this.selectedIndex = 0;
-		this.filterModels(this.searchInput.getValue());
+		this.filterModels(this.searchInput.getValue(), true);
 		if (this.scopeText) {
 			this.scopeText.setText(this.getScopeText());
 		}
 	}
 
-	private filterModels(query: string): void {
+	private filterModels(query: string, preferCurrentModel = false): void {
 		this.filteredModels = query
 			? fuzzyFilter(this.activeModels, query, ({ id, provider }) => `${id} ${provider}`)
 			: this.activeModels;
+		if (preferCurrentModel) {
+			this.selectCurrentModelIfVisible();
+		}
 		this.selectedIndex = Math.min(this.selectedIndex, Math.max(0, this.filteredModels.length - 1));
 		this.updateList();
+	}
+
+	private selectCurrentModelIfVisible(): void {
+		const currentIndex = this.filteredModels.findIndex((item) => modelsAreEqual(this.currentModel, item.model));
+		if (currentIndex >= 0) {
+			this.selectedIndex = currentIndex;
+		}
 	}
 
 	private updateList(): void {
