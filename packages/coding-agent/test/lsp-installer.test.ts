@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { ensureServerInstalled } from "../src/lsp/installer.js";
+import { ensureServerInstalled, ensureServerUninstalled } from "../src/lsp/installer.js";
 import type { ResolvedLspServer } from "../src/lsp/types.js";
 
 const tsServer: ResolvedLspServer = {
@@ -108,5 +108,28 @@ describe("lsp installer", () => {
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}
+	});
+
+	it("returns already_uninstalled when command is unavailable", async () => {
+		const result = await ensureServerUninstalled("/tmp", tsServer, {
+			commandAvailable: () => false,
+		});
+
+		expect(result.status).toBe("already_uninstalled");
+		expect(result.uninstalled).toBe(false);
+	});
+
+	it("returns uninstalled when uninstall command succeeds and binary disappears", async () => {
+		let available = true;
+		const result = await ensureServerUninstalled("/tmp", tsServer, {
+			commandAvailable: () => available,
+			commandRunner: async () => {
+				available = false;
+				return { exitCode: 0, stdout: "", stderr: "" };
+			},
+		});
+
+		expect(result.status).toBe("uninstalled");
+		expect(result.uninstalled).toBe(true);
 	});
 });
