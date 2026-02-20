@@ -107,10 +107,12 @@ export function getLspServerActionOptions(server: LspServerSettingEntry): Select
 			{
 				value: "show-manual-setup-instructions",
 				label: "Show manual setup instructions",
+				description: "View maintainer-provided install steps",
 			},
 			{
 				value: "attempt-agent-guided-manual-install",
 				label: "Attempt agent-guided setup",
+				description: "Ask the agent to guide setup for this server",
 			},
 		);
 	}

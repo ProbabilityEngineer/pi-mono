@@ -32,5 +32,7 @@ describe("settings selector lsp server actions", () => {
 		]);
 		expect(options[1]?.label).toBe("Show manual setup instructions");
 		expect(options[2]?.label).toBe("Attempt agent-guided setup");
+		expect(options[1]?.description).toBe("View maintainer-provided install steps");
+		expect(options[2]?.description).toBe("Ask the agent to guide setup for this server");
 	});
 });
