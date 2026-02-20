@@ -49,6 +49,18 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain("- lsp:");
 		});
 
+		test("includes explicit lsp-first semantic guidance when lsp is selected", () => {
+			const prompt = buildSystemPrompt({
+				selectedTools: ["read", "lsp"],
+				contextFiles: [],
+				skills: [],
+			});
+
+			expect(prompt).toContain(
+				"For requests about references/definitions/hover/symbols/rename/diagnostics, start with a concrete LSP call before text search.",
+			);
+		});
+
 		test("auto-injects capability policy with ast-grep available guidance", () => {
 			const prompt = buildSystemPrompt({
 				contextFiles: [],
