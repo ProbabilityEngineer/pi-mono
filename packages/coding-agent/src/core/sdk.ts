@@ -18,8 +18,10 @@ import { SettingsManager } from "./settings-manager.js";
 import { time } from "./timings.js";
 import {
 	allTools,
+	astGrepTool,
 	bashTool,
 	codingTools,
+	createAstGrepTool,
 	createBashTool,
 	createCodingTools,
 	createEditTool,
@@ -60,7 +62,7 @@ export interface CreateAgentSessionOptions {
 	/** Models available for cycling (Ctrl+P in interactive mode) */
 	scopedModels?: Array<{ model: Model<any>; thinkingLevel: ThinkingLevel }>;
 
-	/** Built-in tools to use. Default: codingTools [read, bash, edit, write] */
+	/** Built-in tools to use. Default: codingTools [read, bash, edit, write, lsp, ast-grep] */
 	tools?: Tool[];
 	/** Custom tools to register (in addition to built-in tools). */
 	customTools?: ToolDefinition[];
@@ -119,6 +121,7 @@ export {
 	writeTool,
 	grepTool,
 	lspTool,
+	astGrepTool,
 	findTool,
 	lsTool,
 	codingTools,
@@ -133,6 +136,7 @@ export {
 	createWriteTool,
 	createGrepTool,
 	createLspTool,
+	createAstGrepTool,
 	createFindTool,
 	createLsTool,
 };
