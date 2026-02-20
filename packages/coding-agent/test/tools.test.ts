@@ -321,6 +321,19 @@ describe("Coding Agent Tools", () => {
 			expect(readFileSync(testFile, "utf-8")).toBe("alpha\nBETA\ngamma\n");
 		});
 
+		it("should explain hashline anchor format for invalid references", async () => {
+			const testFile = join(testDir, "edit-hashline-invalid-anchor.txt");
+			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
+			const hashlineEditTool = createEditTool(testDir, { editMode: "hashline" });
+
+			await expect(
+				hashlineEditTool.execute("test-call-hash-edit-invalid-anchor", {
+					path: testFile,
+					edits: [{ set_line: { anchor: "LINE:5711c4", new_text: "BETA" } }],
+				}),
+			).rejects.toThrow(/Expected format "<lineNumber>:<hash>"/);
+		});
+
 		it("should reject stale hashline anchors", async () => {
 			const testFile = join(testDir, "edit-hashline-stale.txt");
 			writeFileSync(testFile, "alpha\nbeta\ngamma\n");
