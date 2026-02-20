@@ -46,7 +46,7 @@ export function parseLineRef(ref: string): HashlineRef {
 		.toLowerCase();
 	const match = cleaned.match(HASHLINE_REF_RE);
 	if (!match) {
-		throw new Error(`Invalid line reference "${ref}". Expected format "LINE:HASH".`);
+		throw new Error(`Invalid line reference "${ref}". Expected format "<lineNumber>:<hash>" (example: "12:49c4e9").`);
 	}
 	const line = Number.parseInt(match[1], 10);
 	if (line < 1) {
