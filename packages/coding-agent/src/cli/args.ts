@@ -183,7 +183,7 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 }
 
 export function printHelp(): void {
-	console.log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, bash, edit, write tools
+	console.log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, bash, edit, write, lsp, ast-grep tools
 
 ${chalk.bold("Usage:")}
   ${APP_NAME} [options] [@files...] [messages...]
@@ -212,8 +212,8 @@ ${chalk.bold("Options:")}
   --models <patterns>            Comma-separated model patterns for Ctrl+P cycling
                                  Supports globs (anthropic/*, *sonnet*) and fuzzy matching
   --no-tools                     Disable all built-in tools
-  --tools <tools>                Comma-separated list of tools to enable (default: read,bash,edit,write)
-                                 Available: read, bash, edit, write, grep, find, ls
+  --tools <tools>                Comma-separated list of tools to enable (default: read,bash,edit,write,lsp,ast-grep)
+                                 Available: read, bash, edit, write, lsp, ast-grep, grep, find, ls
   --thinking <level>             Set thinking level: off, minimal, low, medium, high, xhigh
   --extension, -e <path>         Load an extension file (can be used multiple times)
   --no-extensions, -ne           Disable extension discovery (explicit -e paths still work)
@@ -313,11 +313,13 @@ ${chalk.bold("Environment Variables:")}
   PI_HOOKS_JSON                    - Inline hooks config JSON (lower precedence than --hooks-config)
   PI_ENABLE_CLAUDE_SETTINGS_HOOKS  - Enable .claude/settings*.json hook loading (set to 1)
 
-${chalk.bold("Available Tools (default: read, bash, edit, write):")}
+${chalk.bold("Available Tools (default: read, bash, edit, write, lsp, ast-grep):")}
   read   - Read file contents
   bash   - Execute bash commands
   edit   - Edit files with find/replace
   write  - Write files (creates/overwrites)
+  lsp    - Language semantic queries (symbols/definition/references/hover)
+  ast-grep - Syntax-aware structural search (and rewrites when requested)
   grep   - Search file contents (read-only, off by default)
   find   - Find files by glob pattern (read-only, off by default)
   ls     - List directory contents (read-only, off by default)
