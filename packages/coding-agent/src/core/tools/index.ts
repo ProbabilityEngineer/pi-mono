@@ -1,4 +1,11 @@
 export {
+	type AstGrepToolDetails,
+	type AstGrepToolInput,
+	type AstGrepToolOptions,
+	astGrepTool,
+	createAstGrepTool,
+} from "./ast-grep.js";
+export {
 	type BashOperations,
 	type BashSpawnContext,
 	type BashSpawnHook,
@@ -77,6 +84,7 @@ export {
 } from "./write.js";
 
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import { type AstGrepToolOptions, astGrepTool, createAstGrepTool } from "./ast-grep.js";
 import { type BashToolOptions, bashTool, createBashTool } from "./bash.js";
 import { createEditTool, type EditToolOptions, editTool } from "./edit.js";
 import { createFindTool, findTool } from "./find.js";
@@ -90,7 +98,7 @@ import { createWriteTool, type WriteToolOptions, writeTool } from "./write.js";
 export type Tool = AgentTool<any>;
 
 // Default tools for full access mode (using process.cwd())
-export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool, lspTool];
+export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool, lspTool, astGrepTool];
 
 // Read-only tools for exploration without modification (using process.cwd())
 export const readOnlyTools: Tool[] = [readTool, grepTool, findTool, lsTool];
@@ -102,6 +110,7 @@ export const allTools = {
 	edit: editTool,
 	write: writeTool,
 	lsp: lspTool,
+	"ast-grep": astGrepTool,
 	grep: grepTool,
 	find: findTool,
 	ls: lsTool,
@@ -120,6 +129,8 @@ export interface ToolsOptions {
 	grep?: GrepToolOptions;
 	/** Options for the write tool */
 	write?: WriteToolOptions;
+	/** Options for the ast-grep tool */
+	astGrep?: AstGrepToolOptions;
 }
 
 /**
@@ -132,6 +143,7 @@ export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
 		createEditTool(cwd, options?.edit),
 		createWriteTool(cwd, options?.write),
 		createLspTool(cwd),
+		createAstGrepTool(cwd, options?.astGrep),
 	];
 }
 
@@ -157,6 +169,7 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 		edit: createEditTool(cwd, options?.edit),
 		write: createWriteTool(cwd, options?.write),
 		lsp: createLspTool(cwd),
+		"ast-grep": createAstGrepTool(cwd, options?.astGrep),
 		grep: createGrepTool(cwd, options?.grep),
 		find: createFindTool(cwd),
 		ls: createLsTool(cwd),
