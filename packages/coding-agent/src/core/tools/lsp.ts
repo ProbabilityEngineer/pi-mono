@@ -21,23 +21,24 @@ import {
 } from "../../lsp/index.js";
 import { resolveToCwd } from "./path-utils.js";
 
+const LSP_ACTIONS = [
+	"hover",
+	"definition",
+	"references",
+	"symbols",
+	"diagnostics",
+	"rename",
+	"format",
+	"status",
+	"reload",
+] as const;
+
+type LspAction = (typeof LSP_ACTIONS)[number];
+
 const lspSchema = Type.Object({
-	action: Type.Union(
-		[
-			Type.Literal("hover"),
-			Type.Literal("definition"),
-			Type.Literal("references"),
-			Type.Literal("symbols"),
-			Type.Literal("diagnostics"),
-			Type.Literal("rename"),
-			Type.Literal("format"),
-			Type.Literal("status"),
-			Type.Literal("reload"),
-		],
-		{
-			description: "LSP operation to run",
-		},
-	),
+	action: Type.String({
+		description: `LSP operation to run. Valid actions: ${LSP_ACTIONS.join(", ")}`,
+	}),
 	file: Type.Optional(Type.String({ description: "File path for file-based operations" })),
 	line: Type.Optional(Type.Number({ description: "1-indexed line number (default: 1)" })),
 	column: Type.Optional(Type.Number({ description: "1-indexed column number (default: 1)" })),
@@ -56,9 +57,23 @@ const lspSchema = Type.Object({
 export type LspToolInput = Static<typeof lspSchema>;
 
 export interface LspToolDetails {
-	action: LspToolInput["action"];
+	action: LspAction;
 	serverName?: string;
 	success: boolean;
+}
+
+function parseLspAction(action: string): { action: LspAction; defaultedFromEmpty: boolean } | { error: string } {
+	const normalized = action.trim().toLowerCase();
+	if (normalized.length === 0) {
+		return { action: "status", defaultedFromEmpty: true };
+	}
+	const matched = LSP_ACTIONS.find((candidate) => candidate === normalized);
+	if (!matched) {
+		return {
+			error: `Error: invalid action "${action}". Valid actions: ${LSP_ACTIONS.join(", ")}.`,
+		};
+	}
+	return { action: matched, defaultedFromEmpty: false };
 }
 
 function formatLocation(location: Location, cwd: string): string {
@@ -208,20 +223,37 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 			{ action, file, line, column, query, include_declaration, new_name, apply }: LspToolInput,
 			signal?: AbortSignal,
 		) => {
-			if (action !== "symbols" && action !== "status" && action !== "reload" && !file) {
+			const parsedAction = parseLspAction(action);
+			if ("error" in parsedAction) {
+				return {
+					content: [{ type: "text", text: parsedAction.error }],
+					details: { action: "status", success: false } satisfies LspToolDetails,
+				};
+			}
+			const resolvedAction = parsedAction.action;
+
+			if (resolvedAction !== "symbols" && resolvedAction !== "status" && resolvedAction !== "reload" && !file) {
 				return {
 					content: [{ type: "text", text: "Error: file is required for this action." }],
-					details: { action, success: false } satisfies LspToolDetails,
+					details: { action: resolvedAction, success: false } satisfies LspToolDetails,
 				};
 			}
 
 			try {
-				if (action === "status") {
+				if (resolvedAction === "status") {
 					const clients = getActiveClients();
 					if (clients.length === 0) {
+						const statusPrefix = parsedAction.defaultedFromEmpty
+							? 'Action was empty; defaulted to "status". '
+							: "";
 						return {
-							content: [{ type: "text", text: "No active LSP servers." }],
-							details: { action, success: true } satisfies LspToolDetails,
+							content: [
+								{
+									type: "text",
+									text: `${statusPrefix}No active LSP servers. This can be normal before the first file-based LSP call. Do not keep polling status; either run a concrete LSP action (symbols/definition/references with file+position) or fall back to read/grep/find.`,
+								},
+							],
+							details: { action: resolvedAction, success: true } satisfies LspToolDetails,
 						};
 					}
 					const lines = clients.map(
@@ -230,19 +262,19 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 					);
 					return {
 						content: [{ type: "text", text: `Active LSP servers:\n${lines.join("\n")}` }],
-						details: { action, success: true } satisfies LspToolDetails,
+						details: { action: resolvedAction, success: true } satisfies LspToolDetails,
 					};
 				}
 
-				if (action === "reload") {
+				if (resolvedAction === "reload") {
 					shutdownAll();
 					return {
 						content: [{ type: "text", text: "Reloaded LSP servers." }],
-						details: { action, success: true } satisfies LspToolDetails,
+						details: { action: resolvedAction, success: true } satisfies LspToolDetails,
 					};
 				}
 
-				if (action === "hover") {
+				if (resolvedAction === "hover") {
 					const result = await lspHover({
 						cwd,
 						filePath: resolveToCwd(file as string, cwd),
@@ -252,11 +284,15 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 					});
 					return {
 						content: [{ type: "text", text: result.contents || "No hover information." }],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 
-				if (action === "definition") {
+				if (resolvedAction === "definition") {
 					const result = await lspDefinition({
 						cwd,
 						filePath: resolveToCwd(file as string, cwd),
@@ -267,7 +303,11 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 					if (result.locations.length === 0) {
 						return {
 							content: [{ type: "text", text: "No definitions found." }],
-							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+							details: {
+								action: resolvedAction,
+								serverName: result.server,
+								success: true,
+							} satisfies LspToolDetails,
 						};
 					}
 					return {
@@ -279,11 +319,15 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 									.join("\n")}`,
 							},
 						],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 
-				if (action === "references") {
+				if (resolvedAction === "references") {
 					const result = await lspReferences({
 						cwd,
 						filePath: resolveToCwd(file as string, cwd),
@@ -295,7 +339,11 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 					if (result.references.length === 0) {
 						return {
 							content: [{ type: "text", text: "No references found." }],
-							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+							details: {
+								action: resolvedAction,
+								serverName: result.server,
+								success: true,
+							} satisfies LspToolDetails,
 						};
 					}
 					return {
@@ -307,31 +355,43 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 									.join("\n")}`,
 							},
 						],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 
-				if (action === "diagnostics") {
+				if (resolvedAction === "diagnostics") {
 					const resolvedFile = resolveToCwd(file as string, cwd);
 					const result = await lspDiagnostics({ cwd, filePath: resolvedFile, signal });
 					if (result.diagnostics.length === 0) {
 						return {
 							content: [{ type: "text", text: "No diagnostics." }],
-							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+							details: {
+								action: resolvedAction,
+								serverName: result.server,
+								success: true,
+							} satisfies LspToolDetails,
 						};
 					}
 					const rendered = formatDiagnostics(result.diagnostics, pathToFileURL(resolvedFile).toString(), cwd);
 					return {
 						content: [{ type: "text", text: rendered.join("\n") }],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 
-				if (action === "rename") {
+				if (resolvedAction === "rename") {
 					if (!new_name) {
 						return {
 							content: [{ type: "text", text: "Error: new_name is required for rename." }],
-							details: { action, success: false } satisfies LspToolDetails,
+							details: { action: resolvedAction, success: false } satisfies LspToolDetails,
 						};
 					}
 					const result = await lspRename({
@@ -346,23 +406,35 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 					if (!result.edit) {
 						return {
 							content: [{ type: "text", text: "No rename edits returned." }],
-							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+							details: {
+								action: resolvedAction,
+								serverName: result.server,
+								success: true,
+							} satisfies LspToolDetails,
 						};
 					}
 					if (!result.applied) {
 						const preview = formatWorkspaceEdit(result.edit, cwd);
 						return {
 							content: [{ type: "text", text: `Rename preview:\n${preview.join("\n")}` }],
-							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+							details: {
+								action: resolvedAction,
+								serverName: result.server,
+								success: true,
+							} satisfies LspToolDetails,
 						};
 					}
 					return {
 						content: [{ type: "text", text: `Applied rename:\n${result.changes.join("\n")}` }],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 
-				if (action === "format") {
+				if (resolvedAction === "format") {
 					const result = await lspFormatDocument({
 						cwd,
 						filePath: resolveToCwd(file as string, cwd),
@@ -372,7 +444,11 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 					if (!result.changed) {
 						return {
 							content: [{ type: "text", text: "No formatting changes." }],
-							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+							details: {
+								action: resolvedAction,
+								serverName: result.server,
+								success: true,
+							} satisfies LspToolDetails,
 						};
 					}
 					const text =
@@ -381,7 +457,11 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 							: `Applied formatting (${result.editCount} edit(s)).`;
 					return {
 						content: [{ type: "text", text }],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 
@@ -397,19 +477,27 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 							content: [
 								{ type: "text", text: query ? `No symbols found for "${query}".` : "No symbols found." },
 							],
-							details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+							details: {
+								action: resolvedAction,
+								serverName: result.server,
+								success: true,
+							} satisfies LspToolDetails,
 						};
 					}
 					return {
 						content: [{ type: "text", text: formatted.join("\n") }],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 
 				if (!query) {
 					return {
 						content: [{ type: "text", text: "Error: query is required for workspace symbols." }],
-						details: { action, success: false } satisfies LspToolDetails,
+						details: { action: resolvedAction, success: false } satisfies LspToolDetails,
 					};
 				}
 
@@ -421,7 +509,11 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 				if (filteredSymbols.length === 0) {
 					return {
 						content: [{ type: "text", text: `No workspace symbols found for "${query}".` }],
-						details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+						details: {
+							action: resolvedAction,
+							serverName: result.server,
+							success: true,
+						} satisfies LspToolDetails,
 					};
 				}
 				return {
@@ -433,13 +525,13 @@ export function createLspTool(cwd: string): AgentTool<typeof lspSchema> {
 								.join("\n"),
 						},
 					],
-					details: { action, serverName: result.server, success: true } satisfies LspToolDetails,
+					details: { action: resolvedAction, serverName: result.server, success: true } satisfies LspToolDetails,
 				};
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
 				return {
 					content: [{ type: "text", text: `LSP error: ${message}` }],
-					details: { action, success: false } satisfies LspToolDetails,
+					details: { action: resolvedAction, success: false } satisfies LspToolDetails,
 				};
 			}
 		},
