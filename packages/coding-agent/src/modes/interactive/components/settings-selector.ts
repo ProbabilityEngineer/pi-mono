@@ -31,6 +31,13 @@ export interface LspServerSettingEntry {
 	manualRemediation?: string;
 }
 
+export interface AstGrepSettingEntry {
+	available: boolean;
+	command: "sg" | "ast-grep";
+	canInstall: boolean;
+	manualRemediation: string;
+}
+
 export interface SettingsConfig {
 	autoCompact: boolean;
 	hashlineMode: boolean;
@@ -40,6 +47,7 @@ export interface SettingsConfig {
 	blockImages: boolean;
 	lspEnabled: boolean;
 	lspServers: LspServerSettingEntry[];
+	astGrep: AstGrepSettingEntry;
 	enableSkillCommands: boolean;
 	steeringMode: "all" | "one-at-a-time";
 	followUpMode: "all" | "one-at-a-time";
@@ -70,6 +78,8 @@ export interface SettingsCallbacks {
 	onLspServerInstall: (serverName: string) => Promise<boolean> | boolean;
 	onLspServerUninstall: (serverName: string) => Promise<boolean> | boolean;
 	onLspServerAttemptAgentGuidedInstall: (serverName: string) => Promise<void> | void;
+	onAstGrepInstall: () => Promise<boolean> | boolean;
+	onAstGrepAttemptAgentGuidedInstall: () => Promise<void> | void;
 	onEnableSkillCommandsChange: (enabled: boolean) => void;
 	onSteeringModeChange: (mode: "all" | "one-at-a-time") => void;
 	onFollowUpModeChange: (mode: "all" | "one-at-a-time") => void;
@@ -109,6 +119,24 @@ export function getLspServerActionOptions(server: LspServerSettingEntry): Select
 		});
 	}
 	options.push({ value: "back", label: "Back", description: "Return to server list" });
+	return options;
+}
+
+export function getAstGrepActionOptions(astGrep: AstGrepSettingEntry): SelectItem[] {
+	const options: SelectItem[] = [];
+	if (astGrep.canInstall) {
+		options.push({
+			value: "install",
+			label: "Install",
+			description: "Run installer commands for your platform",
+		});
+	}
+	options.push({
+		value: "attempt-agent-guided-install",
+		label: "Attempt agent-guided setup",
+		description: "Ask the agent to install and verify ast-grep",
+	});
+	options.push({ value: "back", label: "Back", description: "Return to settings" });
 	return options;
 }
 
@@ -272,6 +300,63 @@ class LspServerSubmenu extends Container {
 			this.renderServerList();
 		};
 
+		this.addChild(this.selectList);
+		this.addChild(new Spacer(1));
+		this.addChild(new Text(theme.fg("dim", "  Enter to run action · Esc to go back"), 0, 0));
+	}
+
+	handleInput(data: string): void {
+		this.selectList.handleInput(data);
+	}
+}
+
+class AstGrepSubmenu extends Container {
+	private selectList: SelectList;
+	private astGrep: AstGrepSettingEntry;
+
+	constructor(
+		astGrep: AstGrepSettingEntry,
+		private callbacks: Pick<SettingsCallbacks, "onAstGrepInstall" | "onAstGrepAttemptAgentGuidedInstall">,
+		private onDone: () => void,
+	) {
+		super();
+		this.astGrep = { ...astGrep };
+		this.selectList = new SelectList([], 10, getSelectListTheme());
+		this.renderMenu();
+	}
+
+	private renderMenu(): void {
+		this.clear();
+		this.addChild(new Text(theme.bold(theme.fg("accent", "ast-grep")), 0, 0));
+		this.addChild(new Spacer(1));
+		const status = this.astGrep.available ? "available" : "unavailable";
+		this.addChild(new Text(theme.fg("muted", `Status: ${status} · command: ${this.astGrep.command}`), 0, 0));
+		this.addChild(new Spacer(1));
+		this.addChild(new Text(theme.fg("dim", this.astGrep.manualRemediation), 0, 0));
+		this.addChild(new Spacer(1));
+
+		const options = getAstGrepActionOptions(this.astGrep);
+		this.selectList = new SelectList(options, options.length, getSelectListTheme());
+		this.selectList.onSelect = (item) => {
+			if (item.value === "back") {
+				this.onDone();
+				return;
+			}
+			void (async () => {
+				if (item.value === "install") {
+					const installed = await this.callbacks.onAstGrepInstall();
+					if (installed) {
+						this.astGrep.available = true;
+						this.astGrep.command = "sg";
+					}
+				}
+				if (item.value === "attempt-agent-guided-install") {
+					await this.callbacks.onAstGrepAttemptAgentGuidedInstall();
+				}
+				this.renderMenu();
+			})();
+		};
+		this.selectList.onCancel = this.onDone;
 		this.addChild(this.selectList);
 		this.addChild(new Spacer(1));
 		this.addChild(new Text(theme.fg("dim", "  Enter to run action · Esc to go back"), 0, 0));
@@ -490,9 +575,27 @@ export class SettingsSelectorComponent extends Container {
 				),
 		});
 
-		// Hardware cursor toggle (insert after lsp-servers)
+		// ast-grep install submenu (insert after lsp-servers)
 		const lspServersIndex = items.findIndex((item) => item.id === "lsp-servers");
 		items.splice(lspServersIndex + 1, 0, {
+			id: "ast-grep",
+			label: "ast-grep",
+			description: "Install/check structural search tool used for bulk rewrites",
+			currentValue: config.astGrep.available ? "available" : "unavailable",
+			submenu: (_currentValue, done) =>
+				new AstGrepSubmenu(
+					config.astGrep,
+					{
+						onAstGrepInstall: callbacks.onAstGrepInstall,
+						onAstGrepAttemptAgentGuidedInstall: callbacks.onAstGrepAttemptAgentGuidedInstall,
+					},
+					() => done(),
+				),
+		});
+
+		// Hardware cursor toggle (insert after ast-grep)
+		const astGrepIndex = items.findIndex((item) => item.id === "ast-grep");
+		items.splice(astGrepIndex + 1, 0, {
 			id: "show-hardware-cursor",
 			label: "Show hardware cursor",
 			description: "Show the terminal cursor while still positioning it for IME support",

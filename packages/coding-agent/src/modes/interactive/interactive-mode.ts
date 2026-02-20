@@ -44,6 +44,11 @@ import {
 } from "@mariozechner/pi-tui";
 import { spawn, spawnSync } from "child_process";
 import {
+	buildAgentGuidedAstGrepInstallPrompt,
+	buildAstGrepSettingsState,
+	ensureAstGrepInstalled,
+} from "../../ast-grep/index.js";
+import {
 	APP_NAME,
 	getAuthPath,
 	getDebugLogPath,
@@ -3059,6 +3064,7 @@ export class InteractiveMode {
 					cwd: process.cwd(),
 					getPersistedState: (serverName) => this.settingsManager.getLspServerSettings(serverName),
 				});
+			const getAstGrepSettings = () => buildAstGrepSettingsState(process.cwd());
 
 			const rebuildSessionRuntime = () => {
 				this.session.rebuildRuntimeFromSettings();
@@ -3074,6 +3080,7 @@ export class InteractiveMode {
 					blockImages: this.settingsManager.getBlockImages(),
 					lspEnabled: this.settingsManager.getLspEnabled(),
 					lspServers: getAllLspServers(),
+					astGrep: getAstGrepSettings(),
 					enableSkillCommands: this.settingsManager.getEnableSkillCommands(),
 					steeringMode: this.session.steeringMode,
 					followUpMode: this.session.followUpMode,
@@ -3185,6 +3192,30 @@ export class InteractiveMode {
 						const remediation = getManualRemediation(serverName);
 						const prompt = buildAgentGuidedManualInstallPrompt(server.name, server.command, remediation);
 						this.showStatus(`Attempting agent-guided manual install: ${serverName}`);
+						void this.session.prompt(prompt);
+					},
+					onAstGrepInstall: async () => {
+						const result = await ensureAstGrepInstalled(process.cwd());
+						if (result.status === "installed" || result.status === "already_installed") {
+							this.showStatus(`ast-grep ready: ${result.command}`);
+							rebuildSessionRuntime();
+							return true;
+						}
+						if (result.remediation) {
+							this.showError(`Failed to install ast-grep: ${result.remediation}`);
+							return false;
+						}
+						this.showError(`Failed to install ast-grep: ${result.error ?? "unknown error"}`);
+						return false;
+					},
+					onAstGrepAttemptAgentGuidedInstall: () => {
+						if (this.session.isStreaming || this.session.isCompacting) {
+							this.showWarning("Wait for the current operation to finish before running install guidance.");
+							return;
+						}
+						const astGrep = getAstGrepSettings();
+						const prompt = buildAgentGuidedAstGrepInstallPrompt(astGrep.command, astGrep.manualRemediation);
+						this.showStatus("Attempting agent-guided install: ast-grep");
 						void this.session.prompt(prompt);
 					},
 					onEnableSkillCommandsChange: (enabled) => {
