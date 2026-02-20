@@ -157,6 +157,13 @@ function rejectPendingRequests(client: LspClient, reason: Error): void {
 	client.pendingRequests.clear();
 }
 
+function evictClientFromCache(client: LspClient): void {
+	const cached = clients.get(client.name);
+	if (cached === client) {
+		clients.delete(client.name);
+	}
+}
+
 async function sendResponse(
 	client: LspClient,
 	id: number,
@@ -223,21 +230,31 @@ function startMessageReader(client: LspClient): void {
 	client.isReading = true;
 
 	const onData = (chunk: Buffer): void => {
-		client.messageBuffer = Buffer.concat([client.messageBuffer, chunk]);
-		let parsed = parseSingleMessage(client.messageBuffer);
-		while (parsed) {
-			client.messageBuffer = parsed.remaining;
-			routeMessage(client, parsed.message);
-			parsed = parseSingleMessage(client.messageBuffer);
+		try {
+			client.messageBuffer = Buffer.concat([client.messageBuffer, chunk]);
+			let parsed = parseSingleMessage(client.messageBuffer);
+			while (parsed) {
+				client.messageBuffer = parsed.remaining;
+				routeMessage(client, parsed.message);
+				parsed = parseSingleMessage(client.messageBuffer);
+			}
+		} catch {
+			onTerminated();
 		}
 	};
 
+	let terminated = false;
 	const onTerminated = (): void => {
+		if (terminated) {
+			return;
+		}
+		terminated = true;
 		client.isReading = false;
 		client.transport.proc.stdout.off("data", onData);
 		client.transport.proc.stdout.off("end", onTerminated);
 		client.transport.proc.stdout.off("error", onTerminated);
 		client.transport.proc.off("close", onTerminated);
+		evictClientFromCache(client);
 		rejectPendingRequests(client, new Error("LSP connection closed"));
 	};
 
