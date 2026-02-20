@@ -26,6 +26,7 @@ Policy:
 - Use `ast-grep` primarily for structural pattern matching and bulk rewrites, not as the sole completeness mechanism for symbol-reference reporting.
 - For completeness-required reporting, run a lexical backstop query (`rg` preferred, then `grep`) over likely source files and merge/dedupe results.
 - Standardize completeness backstop to one canonical lexical query for the symbol set, then merge/dedupe results.
+- For semantic-lookup fallback, run one canonical lexical query with line numbers (`rg -n` preferred), then dedupe and finalize; do not rerun equivalent shell queries.
 - For extraction/listing requests (e.g., "find/list all declarations/usages"), stop after collecting sufficient evidence lines; avoid exploratory full-file reads unless a matched line lacks needed context.
 - If a tool already returns `file:line` plus matched line text, use that output directly instead of re-reading files for the same evidence.
 - Pattern-retry discipline: for the same search intent, do at most two pattern attempts per tool, then switch strategy.
@@ -40,3 +41,7 @@ Policy:
   - one compact list of `file:line` entries with short snippets
   - one optional total-count line
   - no long narrative analysis unless the user asks for it
+- For semantic lookup answers, when fallback evidence is used, return only:
+  - requested symbol definition location (if requested)
+  - deduped reference list (`file:line: matched line`)
+  - optional total-count line

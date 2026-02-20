@@ -103,6 +103,9 @@ describe("buildSystemPrompt", () => {
 				"For completeness-required reporting, run a lexical backstop query (`rg` preferred, then `grep`) over likely source files and merge/dedupe results.",
 			);
 			expect(prompt).toContain(
+				"For semantic-lookup fallback, run one canonical lexical query with line numbers (`rg -n` preferred), then dedupe and finalize; do not rerun equivalent shell queries.",
+			);
+			expect(prompt).toContain(
 				'For extraction/listing requests (e.g., "find/list all declarations/usages"), stop after collecting sufficient evidence lines; avoid exploratory full-file reads unless a matched line lacks needed context.',
 			);
 			expect(prompt).toContain(
@@ -131,6 +134,9 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain("one compact list of `file:line` entries with short snippets");
 			expect(prompt).toContain("one optional total-count line");
 			expect(prompt).toContain("no long narrative analysis unless the user asks for it");
+			expect(prompt).toContain("For semantic lookup answers, when fallback evidence is used, return only:");
+			expect(prompt).toContain("requested symbol definition location (if requested)");
+			expect(prompt).toContain("deduped reference list (`file:line: matched line`)");
 			expect(prompt).not.toContain("transition to LSP as early as possible");
 			expect(prompt).not.toContain("Quick anti-patterns to avoid:");
 			expect(prompt).not.toContain("If `ast-grep=unavailable`, do not plan around `ast-grep`");
