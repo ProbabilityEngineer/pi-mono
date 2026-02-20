@@ -9,8 +9,8 @@ Capability statuses to determine first:
 - per-language LSP server: `installed|missing|auto-installable`
 
 Policy:
-- For semantic tasks (`definition|references|symbols|hover|diagnostics|rename|format`), prefer LSP when `lsp=enabled`.
-- If target source files are unknown, discover candidate files first using `ast-grep` when available; otherwise use `grep`/`find`.
+- For semantic tasks (`definition|references|symbols|hover|diagnostics|rename|format`), if `lsp=enabled` you must run at least one concrete LSP call before finalizing the answer.
+- If target source files are unknown, discover candidate files with `ast-grep` when available. Use `grep`/`find` only when `ast-grep` is unavailable or fails.
 - After discovery for semantic tasks, run `lsp.symbols` on a concrete file path (not a directory), then use position-based LSP actions as needed.
 - Only call `lsp` with a valid `action` (`hover|definition|references|symbols|diagnostics|rename|format|status|reload`); never send empty or placeholder actions.
 - Use `lsp.status` at most once per turn. If it reports no active servers, stop polling and either run a concrete file-based LSP action or fall back to `read`/`grep`/`find`.
