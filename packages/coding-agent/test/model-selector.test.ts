@@ -154,4 +154,67 @@ describe("ModelSelectorComponent", () => {
 		const output = selector.render(120).join("\n");
 		expect(output).toContain("No matching free models. Use /model for the full list.");
 	});
+
+	it("focuses the current model when opening /model", async () => {
+		const currentModel = makeModel("openrouter", "zeta-model");
+		const models = [makeModel("anthropic", "claude-sonnet-4"), currentModel, makeModel("openrouter", "alpha-model")];
+		const registry = {
+			refresh: vi.fn(),
+			getError: vi.fn(() => undefined),
+			getAvailable: vi.fn(async () => models),
+		};
+		const settingsManager = {
+			setDefaultModelAndProvider: vi.fn(),
+		};
+		const selector = new ModelSelectorComponent(
+			makeTui(),
+			currentModel,
+			settingsManager as never,
+			registry as never,
+			[],
+			() => {},
+			() => {},
+		);
+
+		await flushPromises();
+
+		const selectedItem = (selector as any).filteredModels[(selector as any).selectedIndex];
+		expect(selectedItem?.provider).toBe(currentModel.provider);
+		expect(selectedItem?.id).toBe(currentModel.id);
+	});
+
+	it("focuses the current model when opening /freemodel", async () => {
+		const currentModel = makeModel("openrouter", "zeta-free");
+		const models = [
+			makeModel("anthropic", "opus-free"),
+			currentModel,
+			makeModel("openrouter", "alpha-free"),
+			makeModel("openrouter", "paid-model"),
+		];
+		const registry = {
+			refresh: vi.fn(),
+			getError: vi.fn(() => undefined),
+			getAvailable: vi.fn(async () => models),
+		};
+		const settingsManager = {
+			setDefaultModelAndProvider: vi.fn(),
+		};
+		const selector = new ModelSelectorComponent(
+			makeTui(),
+			currentModel,
+			settingsManager as never,
+			registry as never,
+			[],
+			() => {},
+			() => {},
+			undefined,
+			true,
+		);
+
+		await flushPromises();
+
+		const selectedItem = (selector as any).filteredModels[(selector as any).selectedIndex];
+		expect(selectedItem?.provider).toBe(currentModel.provider);
+		expect(selectedItem?.id).toBe(currentModel.id);
+	});
 });
