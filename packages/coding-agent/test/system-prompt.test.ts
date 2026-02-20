@@ -55,6 +55,8 @@ describe("buildSystemPrompt", () => {
 			});
 
 			expect(prompt).toContain("Use capability-aware tool selection for this task.");
+			expect(prompt).toContain("never send empty or placeholder actions.");
+			expect(prompt).toContain("Use `lsp.status` at most once per turn.");
 			expect(prompt).toContain("If `ast-grep=available`, use it for bulk structural rewrites across many files.");
 			expect(prompt).toContain(
 				"lsp.definition/references/hover are position-based (file + line + column). If you only have a symbol name, use lsp.symbols first to locate position.",
