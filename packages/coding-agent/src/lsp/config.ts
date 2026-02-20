@@ -43,6 +43,10 @@ export interface CommandAvailabilityOptions {
 	exists?: (path: string) => boolean;
 }
 
+export interface LoadLspServersOptions {
+	respectRuntimeEnabled?: boolean;
+}
+
 interface LspServerRuntimeSettings {
 	enabled?: boolean;
 	installed?: boolean;
@@ -284,10 +288,11 @@ export function isCommandAvailable(command: string, cwd: string, options: Comman
 	return probeResult.available;
 }
 
-export function loadLspServers(cwd: string): Record<string, ResolvedLspServer> {
+export function loadLspServers(cwd: string, options: LoadLspServersOptions = {}): Record<string, ResolvedLspServer> {
 	const defaults = DEFAULTS as Record<string, LspServerDefinition>;
 	const overrides = loadOverrides(cwd);
-	const runtimeSettings = loadServerRuntimeSettings(cwd);
+	const respectRuntimeEnabled = options.respectRuntimeEnabled ?? true;
+	const runtimeSettings = respectRuntimeEnabled ? loadServerRuntimeSettings(cwd) : {};
 	const merged: Record<string, ResolvedLspServer> = {};
 
 	for (const [name, server] of Object.entries(defaults)) {

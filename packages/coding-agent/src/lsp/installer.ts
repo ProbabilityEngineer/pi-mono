@@ -31,6 +31,15 @@ export interface EnsureServerInstalledResult {
 	error?: string;
 }
 
+export interface EnsureServerUninstalledResult {
+	server: string;
+	command: string;
+	status: "already_uninstalled" | "uninstalled" | "failed" | "unsupported";
+	uninstalled: boolean;
+	remediation?: string;
+	error?: string;
+}
+
 export async function ensureServerInstalled(
 	cwd: string,
 	server: ResolvedLspServer,
@@ -111,6 +120,19 @@ function buildInstallCommands(kind: "npm" | "pip" | "pipx", packageName: string)
 	];
 }
 
+function buildUninstallCommands(kind: "npm" | "pip" | "pipx", packageName: string): string[][] {
+	if (kind === "npm") {
+		return [["npm", "uninstall", packageName]];
+	}
+	if (kind === "pipx") {
+		return [["pipx", "uninstall", packageName]];
+	}
+	return [
+		["python3", "-m", "pip", "uninstall", "--yes", packageName],
+		["pip3", "uninstall", "--yes", packageName],
+	];
+}
+
 function getFailureRemediation(kind: "npm" | "pip" | "pipx", packageName: string): string {
 	if (kind === "npm") {
 		return `Run \`npm install --no-save --save-dev ${packageName}\` in the project root, then retry.`;
@@ -119,6 +141,83 @@ function getFailureRemediation(kind: "npm" | "pip" | "pipx", packageName: string
 		return `Run \`pipx install ${packageName}\` and ensure pipx bin is on PATH, then retry.`;
 	}
 	return `Run \`python3 -m pip install --user ${packageName}\` and ensure your user bin directory is on PATH, then retry.`;
+}
+
+function getUninstallFailureRemediation(kind: "npm" | "pip" | "pipx", packageName: string): string {
+	if (kind === "npm") {
+		return `Run \`npm uninstall ${packageName}\` in the project root and verify \`${packageName}\` binaries are no longer on PATH.`;
+	}
+	if (kind === "pipx") {
+		return `Run \`pipx uninstall ${packageName}\` and verify pipx bin shims are removed from PATH.`;
+	}
+	return `Run \`python3 -m pip uninstall --yes ${packageName}\` and verify your user bin directory no longer exposes the server command.`;
+}
+
+export async function ensureServerUninstalled(
+	cwd: string,
+	server: ResolvedLspServer,
+	options: EnsureServerInstalledOptions = {},
+): Promise<EnsureServerUninstalledResult> {
+	const commandAvailable =
+		options.commandAvailable ??
+		((command: string, commandCwd: string) =>
+			isCommandAvailable(command, commandCwd, options.commandAvailabilityOptions));
+	const timeoutMs = options.timeoutMs ?? 30_000;
+	const commandRunner = options.commandRunner ?? runInstallCommand;
+
+	if (!commandAvailable(server.command, cwd)) {
+		return {
+			server: server.name,
+			command: server.command,
+			status: "already_uninstalled",
+			uninstalled: false,
+		};
+	}
+
+	const installer = server.installer;
+	if (!installer || installer.kind === "unsupported") {
+		return {
+			server: server.name,
+			command: server.command,
+			status: "unsupported",
+			uninstalled: false,
+			remediation:
+				installer?.remediation ??
+				`Uninstall ${server.command} manually from your environment, then verify it is not available on PATH.`,
+		};
+	}
+
+	const uninstallCommands = buildUninstallCommands(installer.kind, installer.package ?? server.command);
+	let lastError = "";
+	for (const [command, ...args] of uninstallCommands) {
+		try {
+			const result = await commandRunner(command, args, cwd, timeoutMs);
+			if (result.exitCode !== 0) {
+				lastError = result.stderr || result.stdout || `Uninstall command exited with ${result.exitCode}`;
+				continue;
+			}
+			if (!commandAvailable(server.command, cwd)) {
+				return {
+					server: server.name,
+					command: server.command,
+					status: "uninstalled",
+					uninstalled: true,
+				};
+			}
+			lastError = `Uninstall command completed but ${server.command} is still available on PATH.`;
+		} catch (error) {
+			lastError = error instanceof Error ? error.message : String(error);
+		}
+	}
+
+	return {
+		server: server.name,
+		command: server.command,
+		status: "failed",
+		uninstalled: false,
+		error: lastError || "Uninstallation failed.",
+		remediation: getUninstallFailureRemediation(installer.kind, installer.package ?? server.command),
+	};
 }
 
 export async function runInstallCommand(

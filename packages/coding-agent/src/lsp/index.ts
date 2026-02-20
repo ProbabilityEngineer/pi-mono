@@ -32,6 +32,7 @@ export {
 	getDefaultCommandProbeContract,
 	getServersForLanguage,
 	isCommandAvailable,
+	type LoadLspServersOptions,
 	loadLspServers,
 	probeCommandInvocation,
 	probeCommandInvocationWithContract,
@@ -48,7 +49,9 @@ export {
 export {
 	type EnsureServerInstalledOptions,
 	type EnsureServerInstalledResult,
+	type EnsureServerUninstalledResult,
 	ensureServerInstalled,
+	ensureServerUninstalled,
 	type InstallCommandResult,
 	type InstallCommandRunner,
 	runInstallCommand,
