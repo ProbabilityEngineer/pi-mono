@@ -20,6 +20,9 @@ Policy:
 - Use `ast-grep` primarily for structural pattern matching and bulk rewrites, not as the sole completeness mechanism for symbol-reference reporting.
 - For completeness-required reporting, run a lexical backstop query (`rg` preferred, then `grep`) over likely source files and merge/dedupe results.
 - Standardize completeness backstop to one canonical lexical query for the symbol set, then merge/dedupe results.
+- For extraction/listing requests (e.g., "find/list all declarations/usages"), stop after collecting sufficient evidence lines; avoid exploratory full-file reads unless a matched line lacks needed context.
+- If a tool already returns `file:line` plus matched line text, use that output directly instead of re-reading files for the same evidence.
+- Pattern-retry discipline: for the same search intent, do at most two pattern attempts per tool, then switch strategy.
 - Only call `lsp` with a valid `action` (`hover|definition|references|symbols|diagnostics|rename|format|status|reload`); never send empty or placeholder actions.
 - If diagnostics are explicitly requested, use `lsp.status` at most once per turn; it must not block direct file-based LSP calls.
 - If LSP returns no result or an indexing error, do not keep retrying. Continue with non-LSP tools and ensure lexical backstop coverage before finalizing.
