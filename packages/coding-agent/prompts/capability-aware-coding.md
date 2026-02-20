@@ -35,6 +35,7 @@ Policy:
 - If LSP returns no result or an indexing error, do not keep retrying. Continue with non-LSP tools and ensure lexical backstop coverage before finalizing.
 - If the first LSP call has low-confidence context (unanchored position, wrong file, or obvious mismatch), skip further LSP retries and move to the backstop.
 - Target-position sanity: do not run `lsp.definition`/`lsp.references` on an unanchored declaration position. Anchor the symbol token position first (for example via file-scoped symbols), or skip to lexical backstop.
+- For symbol-location requests, if file-scoped `lsp.symbols` returns an exact symbol match, return immediately with that `file:line: matched line` evidence and stop additional tool calls.
 - Use `lsp.rename`/`lsp.format` only when edit/write tools are available; in read-only runs, skip mutating LSP actions.
 - If `lsp=disabled` or unsupported for the language, use `read`/`grep`/`find` workflows directly.
 - Default to concise evidence output:

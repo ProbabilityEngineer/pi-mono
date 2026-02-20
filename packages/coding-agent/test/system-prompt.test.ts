@@ -128,6 +128,9 @@ describe("buildSystemPrompt", () => {
 				"Target-position sanity: do not run `lsp.definition`/`lsp.references` on an unanchored declaration position. Anchor the symbol token position first (for example via file-scoped symbols), or skip to lexical backstop.",
 			);
 			expect(prompt).toContain(
+				"For symbol-location requests, if file-scoped `lsp.symbols` returns an exact symbol match, return immediately with that `file:line: matched line` evidence and stop additional tool calls.",
+			);
+			expect(prompt).toContain(
 				"If diagnostics are explicitly requested, use `lsp.status` at most once per turn; it must not block direct file-based LSP calls.",
 			);
 			expect(prompt).toContain("Default to concise evidence output:");
