@@ -68,6 +68,7 @@ import type { ResourceDiagnostic } from "../../core/resource-loader.js";
 import { type SessionContext, SessionManager } from "../../core/session-manager.js";
 import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
+import { ensureServerInstalled, ensureServerUninstalled, loadLspServers } from "../../lsp/index.js";
 import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.js";
 import { copyToClipboard } from "../../utils/clipboard.js";
 import { extensionForImageMimeType, readClipboardImage } from "../../utils/clipboard-image.js";
@@ -3031,6 +3032,20 @@ export class InteractiveMode {
 
 	private showSettingsSelector(): void {
 		this.showSelector((done) => {
+			const getAllLspServers = () =>
+				Object.values(loadLspServers(process.cwd(), { respectRuntimeEnabled: false }))
+					.sort((a, b) => a.name.localeCompare(b.name))
+					.map((server) => {
+						const persisted = this.settingsManager.getLspServerSettings(server.name);
+						return {
+							name: server.name,
+							command: server.command,
+							enabled: persisted.enabled,
+							installed: persisted.installed,
+							canInstall: Boolean(server.installer && server.installer.kind !== "unsupported"),
+						};
+					});
+
 			const rebuildSessionRuntime = () => {
 				this.session.rebuildRuntimeFromSettings();
 				this.setupAutocomplete(this.fdPath);
@@ -3044,6 +3059,7 @@ export class InteractiveMode {
 					autoResizeImages: this.settingsManager.getImageAutoResize(),
 					blockImages: this.settingsManager.getBlockImages(),
 					lspEnabled: this.settingsManager.getLspEnabled(),
+					lspServers: getAllLspServers(),
 					enableSkillCommands: this.settingsManager.getEnableSkillCommands(),
 					steeringMode: this.session.steeringMode,
 					followUpMode: this.session.followUpMode,
@@ -3095,6 +3111,50 @@ export class InteractiveMode {
 					onLspEnabledChange: (enabled) => {
 						this.settingsManager.setLspEnabled(enabled);
 						rebuildSessionRuntime();
+					},
+					onLspServerEnabledChange: (serverName, enabled) => {
+						this.settingsManager.setLspServerEnabled(serverName, enabled);
+						rebuildSessionRuntime();
+					},
+					onLspServerInstall: async (serverName) => {
+						const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
+						if (!server) {
+							this.showError(`Unknown LSP server: ${serverName}`);
+							return;
+						}
+						const result = await ensureServerInstalled(process.cwd(), server);
+						if (result.status === "installed" || result.status === "already_installed") {
+							this.settingsManager.setLspServerInstalled(serverName, true);
+							this.settingsManager.setLspServerEnabled(serverName, true);
+							this.showStatus(`LSP server ready: ${serverName}`);
+							rebuildSessionRuntime();
+							return;
+						}
+						if (result.remediation) {
+							this.showError(`Failed to install ${serverName}: ${result.remediation}`);
+							return;
+						}
+						this.showError(`Failed to install ${serverName}: ${result.error ?? "unknown error"}`);
+					},
+					onLspServerUninstall: async (serverName) => {
+						const server = loadLspServers(process.cwd(), { respectRuntimeEnabled: false })[serverName];
+						if (!server) {
+							this.showError(`Unknown LSP server: ${serverName}`);
+							return;
+						}
+						const result = await ensureServerUninstalled(process.cwd(), server);
+						if (result.status === "uninstalled" || result.status === "already_uninstalled") {
+							this.settingsManager.setLspServerInstalled(serverName, false);
+							this.settingsManager.setLspServerEnabled(serverName, false);
+							this.showStatus(`LSP server removed: ${serverName}`);
+							rebuildSessionRuntime();
+							return;
+						}
+						if (result.remediation) {
+							this.showError(`Failed to uninstall ${serverName}: ${result.remediation}`);
+							return;
+						}
+						this.showError(`Failed to uninstall ${serverName}: ${result.error ?? "unknown error"}`);
 					},
 					onEnableSkillCommandsChange: (enabled) => {
 						this.settingsManager.setEnableSkillCommands(enabled);

@@ -22,6 +22,14 @@ const THINKING_DESCRIPTIONS: Record<ThinkingLevel, string> = {
 	xhigh: "Maximum reasoning (~32k tokens)",
 };
 
+export interface LspServerSettingEntry {
+	name: string;
+	command: string;
+	enabled?: boolean;
+	installed?: boolean;
+	canInstall: boolean;
+}
+
 export interface SettingsConfig {
 	autoCompact: boolean;
 	hashlineMode: boolean;
@@ -30,6 +38,7 @@ export interface SettingsConfig {
 	autoResizeImages: boolean;
 	blockImages: boolean;
 	lspEnabled: boolean;
+	lspServers: LspServerSettingEntry[];
 	enableSkillCommands: boolean;
 	steeringMode: "all" | "one-at-a-time";
 	followUpMode: "all" | "one-at-a-time";
@@ -56,6 +65,9 @@ export interface SettingsCallbacks {
 	onAutoResizeImagesChange: (enabled: boolean) => void;
 	onBlockImagesChange: (blocked: boolean) => void;
 	onLspEnabledChange: (enabled: boolean) => void;
+	onLspServerEnabledChange: (serverName: string, enabled: boolean) => void;
+	onLspServerInstall: (serverName: string) => Promise<void> | void;
+	onLspServerUninstall: (serverName: string) => Promise<void> | void;
 	onEnableSkillCommandsChange: (enabled: boolean) => void;
 	onSteeringModeChange: (mode: "all" | "one-at-a-time") => void;
 	onFollowUpModeChange: (mode: "all" | "one-at-a-time") => void;
@@ -129,6 +141,118 @@ class SelectSubmenu extends Container {
 		// Hint
 		this.addChild(new Spacer(1));
 		this.addChild(new Text(theme.fg("dim", "  Enter to select · Esc to go back"), 0, 0));
+	}
+
+	handleInput(data: string): void {
+		this.selectList.handleInput(data);
+	}
+}
+
+class LspServerSubmenu extends Container {
+	private selectList: SelectList;
+	private servers: LspServerSettingEntry[];
+
+	constructor(
+		servers: LspServerSettingEntry[],
+		private callbacks: Pick<
+			SettingsCallbacks,
+			"onLspServerEnabledChange" | "onLspServerInstall" | "onLspServerUninstall"
+		>,
+		private onDone: () => void,
+	) {
+		super();
+		this.servers = [...servers].sort((a, b) => a.name.localeCompare(b.name));
+		this.selectList = new SelectList([], 10, getSelectListTheme());
+		this.renderServerList();
+	}
+
+	private renderServerList(): void {
+		this.clear();
+		this.addChild(new Text(theme.bold(theme.fg("accent", "LSP Servers")), 0, 0));
+		this.addChild(new Spacer(1));
+		this.addChild(new Text(theme.fg("muted", "Select a server to manage"), 0, 0));
+		this.addChild(new Spacer(1));
+
+		const options: SelectItem[] = this.servers.map((server) => {
+			const enabledText = server.enabled === false ? "disabled" : "enabled";
+			const installText =
+				server.installed === true ? "installed" : server.installed === false ? "not installed" : "unknown";
+			return {
+				value: server.name,
+				label: server.name,
+				description: `${enabledText} · ${installText} · ${server.command}`,
+			};
+		});
+
+		this.selectList = new SelectList(options, Math.min(options.length, 12), getSelectListTheme());
+		this.selectList.onSelect = (item) => {
+			const selected = this.servers.find((server) => server.name === item.value);
+			if (!selected) {
+				return;
+			}
+			this.renderServerActions(selected);
+		};
+		this.selectList.onCancel = this.onDone;
+
+		this.addChild(this.selectList);
+		this.addChild(new Spacer(1));
+		this.addChild(new Text(theme.fg("dim", "  Enter to manage · Esc to go back"), 0, 0));
+	}
+
+	private renderServerActions(server: LspServerSettingEntry): void {
+		this.clear();
+		this.addChild(new Text(theme.bold(theme.fg("accent", `Server: ${server.name}`)), 0, 0));
+		this.addChild(new Spacer(1));
+		this.addChild(new Text(theme.fg("muted", `${server.command}`), 0, 0));
+		this.addChild(new Spacer(1));
+
+		const actionOptions: SelectItem[] = [
+			{
+				value: "toggle-enabled",
+				label: server.enabled === false ? "Enable" : "Disable",
+				description: server.enabled === false ? "Allow this server at runtime" : "Prevent this server at runtime",
+			},
+		];
+		if (server.canInstall) {
+			actionOptions.push(
+				{ value: "install", label: "Install", description: "Run installer command" },
+				{ value: "uninstall", label: "Uninstall", description: "Run uninstall command and disable server" },
+			);
+		}
+		actionOptions.push({ value: "back", label: "Back", description: "Return to server list" });
+
+		this.selectList = new SelectList(actionOptions, actionOptions.length, getSelectListTheme());
+		this.selectList.onSelect = (item) => {
+			if (item.value === "back") {
+				this.renderServerList();
+				return;
+			}
+			void (async () => {
+				if (item.value === "toggle-enabled") {
+					const nextEnabled = server.enabled === false;
+					server.enabled = nextEnabled;
+					this.callbacks.onLspServerEnabledChange(server.name, nextEnabled);
+				}
+				if (item.value === "install") {
+					await this.callbacks.onLspServerInstall(server.name);
+					server.installed = true;
+					server.enabled = true;
+				}
+				if (item.value === "uninstall") {
+					await this.callbacks.onLspServerUninstall(server.name);
+					server.installed = false;
+					server.enabled = false;
+				}
+				this.renderServerActions(server);
+			})();
+		};
+		this.selectList.onCancel = () => {
+			this.renderServerList();
+		};
+
+		this.addChild(this.selectList);
+		this.addChild(new Spacer(1));
+		this.addChild(new Text(theme.fg("dim", "  Enter to run action · Esc to go back"), 0, 0));
 	}
 
 	handleInput(data: string): void {
@@ -324,9 +448,28 @@ export class SettingsSelectorComponent extends Container {
 			values: ["true", "false"],
 		});
 
-		// Hardware cursor toggle (insert after lsp-enabled)
+		// LSP server management submenu (insert after lsp-enabled)
 		const lspEnabledIndex = items.findIndex((item) => item.id === "lsp-enabled");
 		items.splice(lspEnabledIndex + 1, 0, {
+			id: "lsp-servers",
+			label: "LSP servers",
+			description: "Manage individual servers (enable/disable/install/uninstall)",
+			currentValue: `${config.lspServers.filter((server) => server.enabled !== false).length}/${config.lspServers.length} enabled`,
+			submenu: (_currentValue, done) =>
+				new LspServerSubmenu(
+					config.lspServers,
+					{
+						onLspServerEnabledChange: callbacks.onLspServerEnabledChange,
+						onLspServerInstall: callbacks.onLspServerInstall,
+						onLspServerUninstall: callbacks.onLspServerUninstall,
+					},
+					() => done(),
+				),
+		});
+
+		// Hardware cursor toggle (insert after lsp-servers)
+		const lspServersIndex = items.findIndex((item) => item.id === "lsp-servers");
+		items.splice(lspServersIndex + 1, 0, {
 			id: "show-hardware-cursor",
 			label: "Show hardware cursor",
 			description: "Show the terminal cursor while still positioning it for IME support",
