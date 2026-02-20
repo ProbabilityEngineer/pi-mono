@@ -92,4 +92,62 @@ describe("lsp config field parity", () => {
 			rmSync(dir, { recursive: true, force: true });
 		}
 	});
+
+	it("applies persisted lsp server enablement from settings.json", () => {
+		const dir = mkdtempSync(join(tmpdir(), "pi-lsp-config-settings-"));
+		const agentDir = join(dir, "agent");
+		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
+		try {
+			mkdirSync(agentDir, { recursive: true });
+			process.env.PI_CODING_AGENT_DIR = agentDir;
+			mkdirSync(join(dir, ".pi"), { recursive: true });
+
+			writeFileSync(
+				join(agentDir, "settings.json"),
+				JSON.stringify(
+					{
+						lsp: {
+							servers: {
+								basedpyright: {
+									enabled: false,
+								},
+							},
+						},
+					},
+					null,
+					2,
+				),
+				"utf8",
+			);
+
+			writeFileSync(
+				join(dir, ".pi", "settings.json"),
+				JSON.stringify(
+					{
+						lsp: {
+							servers: {
+								"sourcekit-lsp": {
+									enabled: true,
+								},
+							},
+						},
+					},
+					null,
+					2,
+				),
+				"utf8",
+			);
+
+			const servers = loadLspServers(dir);
+			expect(servers["basedpyright"]).toBeUndefined();
+			expect(servers["sourcekit-lsp"]?.command).toBe("sourcekit-lsp");
+		} finally {
+			if (previousAgentDir === undefined) {
+				delete process.env.PI_CODING_AGENT_DIR;
+			} else {
+				process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+			}
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 });

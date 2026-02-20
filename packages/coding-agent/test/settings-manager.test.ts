@@ -283,6 +283,33 @@ describe("SettingsManager", () => {
 			expect(manager.getLspAutoInstallOnEncounter()).toBe(false);
 			expect(manager.getLspLanguageEnabled("python")).toBe(true);
 		});
+
+		it("should persist and reload global per-server lsp state", async () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			manager.setLspServerEnabled("basedpyright", false);
+			manager.setLspServerInstalled("basedpyright", true);
+			await manager.flush();
+
+			manager.reload();
+
+			expect(manager.getLspServerEnabled("basedpyright")).toBe(false);
+			expect(manager.getLspServerSettings("basedpyright").installed).toBe(true);
+		});
+
+		it("should allow project-level server state overrides", async () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+			manager.setLspServerEnabled("sourcekit-lsp", false);
+			manager.setProjectLspServerEnabled("sourcekit-lsp", true);
+			await manager.flush();
+
+			manager.reload();
+
+			expect(manager.getLspServerEnabled("sourcekit-lsp")).toBe(true);
+
+			const projectSettingsPath = join(projectDir, ".pi", "settings.json");
+			const projectSettings = JSON.parse(readFileSync(projectSettingsPath, "utf-8"));
+			expect(projectSettings.lsp.servers["sourcekit-lsp"].enabled).toBe(true);
+		});
 	});
 
 	describe("edit settings", () => {
