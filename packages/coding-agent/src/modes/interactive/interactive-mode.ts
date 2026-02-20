@@ -68,7 +68,12 @@ import type { ResourceDiagnostic } from "../../core/resource-loader.js";
 import { type SessionContext, SessionManager } from "../../core/session-manager.js";
 import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
-import { ensureServerInstalled, ensureServerUninstalled, loadLspServers } from "../../lsp/index.js";
+import {
+	buildLspServerSettingsState,
+	ensureServerInstalled,
+	ensureServerUninstalled,
+	loadLspServers,
+} from "../../lsp/index.js";
 import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.js";
 import { copyToClipboard } from "../../utils/clipboard.js";
 import { extensionForImageMimeType, readClipboardImage } from "../../utils/clipboard-image.js";
@@ -3033,18 +3038,10 @@ export class InteractiveMode {
 	private showSettingsSelector(): void {
 		this.showSelector((done) => {
 			const getAllLspServers = () =>
-				Object.values(loadLspServers(process.cwd(), { respectRuntimeEnabled: false }))
-					.sort((a, b) => a.name.localeCompare(b.name))
-					.map((server) => {
-						const persisted = this.settingsManager.getLspServerSettings(server.name);
-						return {
-							name: server.name,
-							command: server.command,
-							enabled: persisted.enabled,
-							installed: persisted.installed,
-							canInstall: Boolean(server.installer && server.installer.kind !== "unsupported"),
-						};
-					});
+				buildLspServerSettingsState({
+					cwd: process.cwd(),
+					getPersistedState: (serverName) => this.settingsManager.getLspServerSettings(serverName),
+				});
 
 			const rebuildSessionRuntime = () => {
 				this.session.rebuildRuntimeFromSettings();

@@ -26,7 +26,7 @@ export interface LspServerSettingEntry {
 	name: string;
 	command: string;
 	enabled?: boolean;
-	installed?: boolean;
+	installed: boolean;
 	canInstall: boolean;
 }
 
@@ -175,8 +175,7 @@ class LspServerSubmenu extends Container {
 
 		const options: SelectItem[] = this.servers.map((server) => {
 			const enabledText = server.enabled === false ? "disabled" : "enabled";
-			const installText =
-				server.installed === true ? "installed" : server.installed === false ? "not installed" : "unknown";
+			const installText = server.installed ? "installed" : "not installed";
 			return {
 				value: server.name,
 				label: server.name,

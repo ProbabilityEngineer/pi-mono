@@ -71,6 +71,12 @@ export {
 } from "./planner.js";
 export { runCommandProbe } from "./probe.js";
 export { formatDiagnostics, formatWorkspaceEdit } from "./render.js";
+export {
+	type BuildLspServerSettingsStateOptions,
+	buildLspServerSettingsState,
+	type LspServerSettingsState,
+	type PersistedLspServerState,
+} from "./settings-state.js";
 export type {
 	Diagnostic,
 	DocumentChange,
