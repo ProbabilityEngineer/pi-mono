@@ -49,6 +49,21 @@ describe("lsp tool", () => {
 		expect(getTextContent(result)).toContain("file is required");
 	});
 
+	it("defaults empty action to status with corrective guidance", async () => {
+		mockGetActiveClients.mockReturnValueOnce([]);
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-empty", { action: "" });
+		expect(getTextContent(result)).toContain('defaulted to "status"');
+		expect(getTextContent(result)).toContain("Do not keep polling status");
+	});
+
+	it("returns actionable error for invalid action", async () => {
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-invalid", { action: "wat" });
+		expect(getTextContent(result)).toContain('invalid action "wat"');
+		expect(getTextContent(result)).toContain("Valid actions");
+	});
+
 	it("renders hover result", async () => {
 		mockLspHover.mockResolvedValueOnce({ server: "tsserver", contents: "hover text" });
 		const tool = createLspTool("/workspace");
@@ -270,6 +285,14 @@ describe("lsp tool", () => {
 		expect(getTextContent(result)).toContain("Active LSP servers");
 		expect(getTextContent(result)).toContain("typescript-language-server");
 		expect(mockGetActiveClients).toHaveBeenCalledTimes(1);
+	});
+
+	it("reports no active clients with non-loop fallback guidance", async () => {
+		mockGetActiveClients.mockReturnValueOnce([]);
+		const tool = createLspTool("/workspace");
+		const result = await tool.execute("call-status-empty", { action: "status" });
+		expect(getTextContent(result)).toContain("No active LSP servers");
+		expect(getTextContent(result)).toContain("Do not keep polling status");
 	});
 
 	it("reloads active lsp clients for reload action", async () => {
