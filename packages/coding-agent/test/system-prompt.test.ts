@@ -35,6 +35,8 @@ describe("buildSystemPrompt", () => {
 			expect(prompt).toContain("- bash:");
 			expect(prompt).toContain("- edit:");
 			expect(prompt).toContain("- write:");
+			expect(prompt).toContain("- lsp:");
+			expect(prompt).toContain("- ast-grep:");
 		});
 
 		test("includes lsp when selected", () => {
@@ -55,6 +57,7 @@ describe("buildSystemPrompt", () => {
 			});
 
 			expect(prompt).toContain("Use capability-aware tool selection for this task.");
+			expect(prompt).toContain("Use ast-grep for syntax-aware structural queries and bulk code-shape matching.");
 			expect(prompt).toContain("never send empty or placeholder actions.");
 			expect(prompt).toContain("Use `lsp.status` at most once per turn.");
 			expect(prompt).toContain(
