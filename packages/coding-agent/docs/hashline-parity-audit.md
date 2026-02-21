@@ -8,7 +8,7 @@ Audit current hashline behavior in `packages/coding-agent` against Oh-My-Pi pari
 
 ## Current Behavior Inventory
 
-1. Hashline addressing is implemented with `LINE:HASH` anchors and accepts hash prefixes.
+1. Hashline addressing is implemented with `LINE#HASH` anchors and accepts hash prefixes.
 2. Hash computation emits 6 hex chars and remains backward compatible with 2-char anchors.
 3. Anchor resolution supports drift recovery near the requested line and global fallback search.
 4. Ambiguous anchors fail fast with explicit error messages and re-read guidance.

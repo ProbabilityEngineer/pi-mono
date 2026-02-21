@@ -73,7 +73,7 @@ describe("AgentSession hashline read gating", () => {
 			expect(output).toContain("beta");
 			expect(output).not.toMatch(/^[0-9]+:[0-9a-f]{6}\|/m);
 			expect(grepOutput).toContain("example.txt:2: beta");
-			expect(grepOutput).not.toMatch(/example\.txt:2:[0-9a-f]{6}\|beta/);
+			expect(grepOutput).not.toMatch(/example\.txt:2#[0-9a-f]{6}|beta/);
 		} finally {
 			session.dispose();
 			rmSync(tempDir, { recursive: true, force: true });
@@ -118,9 +118,9 @@ describe("AgentSession hashline read gating", () => {
 			const grepResult = await grepTool.execute("hashline-gating-on-grep", { pattern: "beta", path: testFile });
 			const grepOutput = extractText(grepResult);
 
-			expect(output).toContain(`1:${computeLineHash(1, "alpha")}|alpha`);
-			expect(output).toContain(`2:${computeLineHash(2, "beta")}|beta`);
-			expect(grepOutput).toContain(`example.txt:2:${computeLineHash(2, "beta")}|beta`);
+			expect(output).toContain(`1#${computeLineHash(1, "alpha")}|alpha`);
+			expect(output).toContain(`2#${computeLineHash(2, "beta")}|beta`);
+			expect(grepOutput).toContain(`example.txt:2#${computeLineHash(2, "beta")}|beta`);
 		} finally {
 			session.dispose();
 			rmSync(tempDir, { recursive: true, force: true });

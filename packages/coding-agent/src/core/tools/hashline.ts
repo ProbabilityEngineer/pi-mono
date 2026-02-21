@@ -10,8 +10,8 @@ export type HashlineEditOperation =
 	| { replace_lines: { start_anchor: string; end_anchor: string; new_text: string } }
 	| { insert_after: { anchor: string; text: string } };
 
-const HASHLINE_REF_RE = /(\d+):([0-9a-fA-F]+)/;
-const HASHLINE_TEXT_PREFIX_RE = /^\d+:[0-9a-fA-F]{2,}\|/;
+const HASHLINE_REF_RE = /(\d+)#([0-9a-fA-F]+)/;
+const HASHLINE_TEXT_PREFIX_RE = /^\d+#[0-9a-fA-F]{2,}\|/;
 const HASH_HEX_LENGTH = 6;
 const MIN_COMPAT_HASH_HEX_LENGTH = 2;
 const RECOVERY_WINDOW = 8;
@@ -33,7 +33,7 @@ export function formatHashLines(content: string, startLine = 1): string {
 	return lines
 		.map((line, index) => {
 			const lineNum = startLine + index;
-			return `${lineNum}:${computeLineHash(lineNum, line)}|${line}`;
+			return `${lineNum}#${computeLineHash(lineNum, line)}|${line}`;
 		})
 		.join("\n");
 }
@@ -46,7 +46,7 @@ export function parseLineRef(ref: string): HashlineRef {
 		.toLowerCase();
 	const match = cleaned.match(HASHLINE_REF_RE);
 	if (!match) {
-		throw new Error(`Invalid line reference "${ref}". Expected format "<lineNumber>:<hash>" (example: "12:49c4e9").`);
+		throw new Error(`Invalid line reference "${ref}". Expected format "<lineNumber>#<hash>" (example: "12#49c4e9").`);
 	}
 	const line = Number.parseInt(match[1], 10);
 	if (line < 1) {
@@ -111,7 +111,7 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 	}
 	if (nearbyMatches.length > 1) {
 		throw new Error(
-			`Ambiguous hashline anchor "${ref.line}:${ref.hash}". Found multiple nearby matches at lines ${nearbyMatches.join(", ")}. Re-read the file and retry.`,
+			`Ambiguous hashline anchor "${ref.line}#${ref.hash}". Found multiple nearby matches at lines ${nearbyMatches.join(", ")}. Re-read the file and retry.`,
 		);
 	}
 
@@ -121,7 +121,7 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 	}
 	if (allMatches.length > 1) {
 		throw new Error(
-			`Ambiguous hashline anchor "${ref.line}:${ref.hash}". Found multiple matches at lines ${allMatches.join(", ")}. Re-read the file and retry.`,
+			`Ambiguous hashline anchor "${ref.line}#${ref.hash}". Found multiple matches at lines ${allMatches.join(", ")}. Re-read the file and retry.`,
 		);
 	}
 

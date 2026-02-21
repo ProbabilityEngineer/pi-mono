@@ -164,8 +164,8 @@ describe("Coding Agent Tools", () => {
 			const result = await hashlineReadTool.execute("test-call-hash-read", { path: testFile });
 			const output = getTextOutput(result);
 
-			expect(output).toContain(`1:${computeLineHash(1, "alpha")}|alpha`);
-			expect(output).toContain(`2:${computeLineHash(2, "beta")}|beta`);
+			expect(output).toContain(`1#${computeLineHash(1, "alpha")}|alpha`);
+			expect(output).toContain(`2#${computeLineHash(2, "beta")}|beta`);
 		});
 
 		it("should detect image MIME type from file magic (not extension)", async () => {
@@ -314,7 +314,7 @@ describe("Coding Agent Tools", () => {
 
 			const result = await hashlineEditTool.execute("test-call-hash-edit-1", {
 				path: testFile,
-				edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
+				edits: [{ set_line: { anchor: `2#${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
 			});
 
 			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
@@ -329,9 +329,9 @@ describe("Coding Agent Tools", () => {
 			await expect(
 				hashlineEditTool.execute("test-call-hash-edit-invalid-anchor", {
 					path: testFile,
-					edits: [{ set_line: { anchor: "LINE:5711c4", new_text: "BETA" } }],
+					edits: [{ set_line: { anchor: "LINE#5711c4", new_text: "BETA" } }],
 				}),
-			).rejects.toThrow(/Expected format "<lineNumber>:<hash>"/);
+			).rejects.toThrow(/Expected format "<lineNumber>#<hash>"/);
 		});
 
 		it("should reject stale hashline anchors", async () => {
@@ -343,7 +343,7 @@ describe("Coding Agent Tools", () => {
 			await expect(
 				hashlineEditTool.execute("test-call-hash-edit-2", {
 					path: testFile,
-					edits: [{ set_line: { anchor: `2:${wrongHash}`, new_text: "BETA" } }],
+					edits: [{ set_line: { anchor: `2#${wrongHash}`, new_text: "BETA" } }],
 				}),
 			).rejects.toThrow(/Hash mismatch/);
 		});
@@ -355,7 +355,7 @@ describe("Coding Agent Tools", () => {
 
 			const result = await hashlineEditTool.execute("test-call-hash-edit-3", {
 				path: testFile,
-				edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
+				edits: [{ set_line: { anchor: `2#${computeLineHash(2, "beta")}`, new_text: "BETA" } }],
 			});
 
 			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
@@ -369,7 +369,7 @@ describe("Coding Agent Tools", () => {
 
 			const result = await hashlineEditTool.execute("test-call-hash-edit-4", {
 				path: testFile,
-				edits: [{ set_line: { anchor: `line 2:${computeLineHash(2, "beta")}|beta`, new_text: "BETA" } }],
+				edits: [{ set_line: { anchor: `line 2#${computeLineHash(2, "beta")}|beta`, new_text: "BETA" } }],
 			});
 
 			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
@@ -384,7 +384,7 @@ describe("Coding Agent Tools", () => {
 			await expect(
 				hashlineEditTool.execute("test-call-hash-edit-5", {
 					path: testFile,
-					edits: [{ set_line: { anchor: `2:${computeLineHash(2, "beta")}`, new_text: "2:abcdef|BETA" } }],
+					edits: [{ set_line: { anchor: `2#${computeLineHash(2, "beta")}`, new_text: "2#abcdef|BETA" } }],
 				}),
 			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
 		});
@@ -400,9 +400,9 @@ describe("Coding Agent Tools", () => {
 					edits: [
 						{
 							replace_lines: {
-								start_anchor: `1:${computeLineHash(1, "alpha")}`,
-								end_anchor: `2:${computeLineHash(2, "beta")}`,
-								new_text: "1:abcdef|ALPHA\n2:bbbbbb|BETA",
+								start_anchor: `1#${computeLineHash(1, "alpha")}`,
+								end_anchor: `2#${computeLineHash(2, "beta")}`,
+								new_text: "1#abcdef|ALPHA\n2#bbbbbb|BETA",
 							},
 						},
 					],
@@ -418,7 +418,7 @@ describe("Coding Agent Tools", () => {
 			await expect(
 				hashlineEditTool.execute("test-call-hash-edit-7", {
 					path: testFile,
-					edits: [{ insert_after: { anchor: `2:${computeLineHash(2, "beta")}`, text: "3:abcdef|delta" } }],
+					edits: [{ insert_after: { anchor: `2#${computeLineHash(2, "beta")}`, text: "3#abcdef|delta" } }],
 				}),
 			).rejects.toThrow(/Do not include hashline prefixes in replacement text\./);
 		});
@@ -431,7 +431,7 @@ describe("Coding Agent Tools", () => {
 
 			const result = await hashlineEditTool.execute("test-call-hash-edit-8", {
 				path: testFile,
-				edits: [{ set_line: { anchor: `2:${legacyAnchor}`, new_text: "BETA" } }],
+				edits: [{ set_line: { anchor: `2#${legacyAnchor}`, new_text: "BETA" } }],
 			});
 
 			expect(getTextOutput(result)).toContain("Successfully applied hashline edits");
@@ -552,7 +552,7 @@ describe("Coding Agent Tools", () => {
 			});
 
 			const output = getTextOutput(result);
-			expect(output).toContain(`hashline-grep.txt:2:${computeLineHash(2, "match line")}|match line`);
+			expect(output).toContain(`hashline-grep.txt:2#${computeLineHash(2, "match line")}|match line`);
 		});
 	});
 

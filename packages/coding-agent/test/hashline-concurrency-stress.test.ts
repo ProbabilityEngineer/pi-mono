@@ -47,8 +47,11 @@ async function runHashlineStressScenario(
 			const current = firstLine(readFileSync(path, "utf8"));
 			const anchor =
 				attempts === 1
-					? `1:${computeLineHash(1, current) === "000000" ? "000001" : "000000"}`
-					: `1:${computeLineHash(1, current)}`;
+					? `1#${computeLineHash(1, current) === "000000" ? "000001" : "000000"}`
+					: `1#${computeLineHash(1, current)}`;
+			attempts === 1
+				? `1:${computeLineHash(1, current) === "000000" ? "000001" : "000000"}`
+				: `1:${computeLineHash(1, current)}`;
 
 			try {
 				await editTool.execute(`stress-${workerId}-attempt-${attempts}`, {
@@ -112,7 +115,7 @@ describe("hashline concurrency stress validation", () => {
 		await expect(
 			editTool.execute("explicit-mismatch", {
 				path,
-				edits: [{ set_line: { anchor: `1:${wrongHash}`, new_text: "nope" } }],
+				edits: [{ set_line: { anchor: `1#${wrongHash}`, new_text: "nope" } }],
 			}),
 		).rejects.toThrow(/Hash mismatch/);
 		const result = await runHashlineStressScenario(path, workers, 15, "shared-final");

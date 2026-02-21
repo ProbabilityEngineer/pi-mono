@@ -70,7 +70,7 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 	return {
 		name: "grep",
 		label: "grep",
-		description: `Search file contents for a pattern. Returns matching lines with file paths and line numbers. Respects .gitignore. Output is truncated to ${DEFAULT_LIMIT} matches or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Long lines are truncated to ${GREP_MAX_LINE_LENGTH} chars.${hashLines ? " In hashline mode, lines include hash refs as path:LINE:HASH|content (and path-LINE-HASH|content for context)." : ""}`,
+		description: `Search file contents for a pattern. Returns matching lines with file paths and line numbers. Respects .gitignore. Output is truncated to ${DEFAULT_LIMIT} matches or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Long lines are truncated to ${GREP_MAX_LINE_LENGTH} chars.${hashLines ? " In hashline mode, lines include hash refs as path:LINE#HASH|content (and path-LINE#HASH|content for context)." : ""}`,
 		parameters: grepSchema,
 		execute: async (
 			_toolCallId: string,
@@ -227,9 +227,9 @@ export function createGrepTool(cwd: string, options?: GrepToolOptions): AgentToo
 								if (hashLines) {
 									const lineHash = computeLineHash(current, sanitized);
 									if (isMatchLine) {
-										block.push(`${relativePath}:${current}:${lineHash}|${truncatedText}`);
+										block.push(`${relativePath}:${current}#${lineHash}|${truncatedText}`);
 									} else {
-										block.push(`${relativePath}-${current}-${lineHash}|${truncatedText}`);
+										block.push(`${relativePath}-${current}#${lineHash}|${truncatedText}`);
 									}
 									continue;
 								}
