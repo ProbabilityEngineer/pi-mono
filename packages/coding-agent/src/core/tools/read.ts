@@ -43,7 +43,7 @@ const defaultReadOperations: ReadOperations = {
 export interface ReadToolOptions {
 	/** Whether to auto-resize images to 2000x2000 max. Default: true */
 	autoResizeImages?: boolean;
-	/** Whether text output should be prefixed as LINE:HASH|content. Default: false */
+	/** Whether text output should be prefixed as LINE#HASH|content. Default: false */
 	hashLines?: boolean;
 	/** Optional callback invoked when this tool accesses a file path. */
 	onPathAccess?: (path: string) => Promise<string | undefined> | string | undefined;
@@ -59,7 +59,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 	return {
 		name: "read",
 		label: "read",
-		description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp). Images are sent as attachments. For text files, output is truncated to ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.${hashLines ? " In hashline mode, text lines are prefixed as LINE:HASH|content." : ""}`,
+		description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp). Images are sent as attachments. For text files, output is truncated to ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.${hashLines ? " In hashline mode, text lines are prefixed as LINE#HASH|content." : ""}`,
 		parameters: readSchema,
 		execute: async (
 			_toolCallId: string,

@@ -109,7 +109,7 @@ export interface Settings {
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
 	edit?: EditSettings;
-	readHashLines?: boolean; // default: false - include LINE:HASH prefixes in read output
+	readHashLines?: boolean; // default: false - include LINE#HASH prefixes in read output
 	lsp?: LspSettings;
 	gastownMode?: boolean; // default: true - enable Gastown hook defaults when no higher-precedence hook config is set
 }
