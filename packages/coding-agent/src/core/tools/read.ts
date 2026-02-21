@@ -10,10 +10,11 @@ import { resolveReadPath } from "./path-utils.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from "./truncate.js";
 
 const readSchema = Type.Object({
-	path: Type.String({ description: "Path to the file to read (relative or absolute)" }),
-	offset: Type.Optional(Type.Number({ description: "Line number to start reading from (1-indexed)" })),
+	ranges: Type.Optional(Type.Array(Type.Object({
+		start: Type.Number({ description: "Start line of range (1-indexed, inclusive)" }),
+		end: Type.Number({ description: "End line of range (1-indexed, inclusive)" }),
+	})),
 	limit: Type.Optional(Type.Number({ description: "Maximum number of lines to read" })),
-});
 
 export type ReadToolInput = Static<typeof readSchema>;
 
@@ -45,7 +46,8 @@ export interface ReadToolOptions {
 	autoResizeImages?: boolean;
 	/** Whether text output should be prefixed as LINE#HASH|content. Default: false */
 	hashLines?: boolean;
-	/** Optional callback invoked when this tool accesses a file path. */
+	/** Optional: read only specific line ranges for partial re-read on hash mismatch */
+	ranges?: AffectedLineRange[];
 	onPathAccess?: (path: string) => Promise<string | undefined> | string | undefined;
 	/** Custom operations for file reading. Default: local filesystem */
 	operations?: ReadOperations;
