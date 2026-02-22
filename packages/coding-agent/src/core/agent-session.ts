@@ -536,11 +536,13 @@ export class AgentSession {
 				args: event.args,
 			};
 			await this._extensionRunner.emit(extensionEvent);
-			// Store edit tool args for hashline partial re-read
+			// Store edit tool args for hashline partial re-read automation
+			// Args are used by _triggerHashlineReRead to re-read affected lines after hash mismatch
 			if (event.toolName === "edit") {
 				this._lastEditToolArgs = { path: (event.args as { path?: string }).path ?? "", args: event.args };
 			} else {
-				// Clear stale args when non-edit tool executes (handles rapid sequential edits)
+				// Clear stale args when non-edit tool executes
+				// This handles rapid sequential edits where only the last edit should trigger re-read
 				this._lastEditToolArgs = undefined;
 			}
 		} else if (event.type === "tool_execution_update") {
