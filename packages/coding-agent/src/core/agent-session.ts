@@ -2232,6 +2232,21 @@ export class AgentSession {
 		} catch (error) {
 			// Log error but don't fail the original edit
 			console.error("Hashline partial re-read failed:", error);
+			// Append error message as tool result so agent knows re-read failed
+			const errorMessage = {
+				role: "toolResult" as const,
+				content: [
+					{
+						type: "text" as const,
+						text: `[Hashline] Partial re-read failed: ${error}. You may need to manually re-read the file to get fresh hashlines.`,
+					},
+				],
+				toolCallId: `hashline_reread_error_${Date.now()}`,
+				toolName: "read",
+				isError: true,
+				timestamp: Date.now(),
+			};
+			this.agent.appendMessage(errorMessage);
 		} finally {
 			this._lastEditToolArgs = undefined;
 		}
