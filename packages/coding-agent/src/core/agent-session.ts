@@ -81,6 +81,7 @@ import type { SettingsManager } from "./settings-manager.js";
 import { BUILTIN_SLASH_COMMANDS, type SlashCommandInfo, type SlashCommandLocation } from "./slash-commands.js";
 import { buildSystemPrompt } from "./system-prompt.js";
 import type { BashOperations } from "./tools/bash.js";
+import type { AffectedLineRange } from "./tools/hashline.js";
 import { createAllTools } from "./tools/index.js";
 
 // ============================================================================
@@ -274,6 +275,9 @@ export class AgentSession {
 
 	// Tool registry for extension getTools/setTools
 	private _toolRegistry: Map<string, AgentTool> = new Map();
+
+	// Hashline state for partial re-read
+	private _lastEditToolArgs: { path: string; args: unknown } | undefined = undefined;
 
 	// Base system prompt (without extension appends) - used to apply fresh appends each turn
 	private _baseSystemPrompt = "";
@@ -550,6 +554,20 @@ export class AgentSession {
 				isError: event.isError,
 			};
 			await this._extensionRunner.emit(extensionEvent);
+
+			// Handle hashline partial re-read on hash mismatch
+			if (
+				event.toolName === "edit" &&
+				!event.isError &&
+				event.result &&
+				typeof event.result === "object" &&
+				"details" in event.result
+			) {
+				const result = event.result as { details?: { affectedLineRanges?: AffectedLineRange[] } };
+				if (result.details?.affectedLineRanges && result.details.affectedLineRanges.length > 0) {
+					await this._triggerHashlineReRead(result.details.affectedLineRanges);
+				}
+			}
 		}
 	}
 
@@ -2171,6 +2189,51 @@ export class AgentSession {
 		} catch {
 			// Never fail the caller tool on LSP encounter side effects.
 			return undefined;
+		}
+	}
+
+	/** Trigger a partial re-read for hashline hash mismatch recovery */
+	private async _triggerHashlineReRead(ranges: AffectedLineRange[]): Promise<void> {
+		if (!this._lastEditToolArgs) {
+			return;
+		}
+
+		const editPath = this._lastEditToolArgs.path;
+		const readTool = this._toolRegistry.get("read");
+		if (!readTool) {
+			return;
+		}
+
+		try {
+			// Compute effective offset/limit from ranges
+			const minStart = Math.min(...ranges.map((r) => r.startLine));
+			const maxEnd = Math.max(...ranges.map((r) => r.endLine));
+			const offset = minStart;
+			const limit = maxEnd - minStart + 1;
+
+			// Execute read tool with ranges
+			const result = await readTool.execute(
+				`read_${Date.now()}`,
+				{ path: editPath, offset, limit, ranges },
+				undefined,
+			);
+
+			// Append the read result as a tool result message to continue the flow
+			const toolResultMessage = {
+				role: "toolResult" as const,
+				content: result.content,
+				toolCallId: `hashline_reread_${Date.now()}`,
+				toolName: "read",
+				isError: false,
+				timestamp: Date.now(),
+			};
+
+			this.agent.appendMessage(toolResultMessage);
+		} catch (error) {
+			// Log error but don't fail the original edit
+			console.error("Hashline partial re-read failed:", error);
+		} finally {
+			this._lastEditToolArgs = undefined;
 		}
 	}
 
