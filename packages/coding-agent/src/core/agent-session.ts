@@ -536,6 +536,13 @@ export class AgentSession {
 				args: event.args,
 			};
 			await this._extensionRunner.emit(extensionEvent);
+			// Store edit tool args for hashline partial re-read
+			if (event.toolName === "edit") {
+				this._lastEditToolArgs = { path: (event.args as { path?: string }).path ?? "", args: event.args };
+			} else {
+				// Clear stale args when non-edit tool executes (handles rapid sequential edits)
+				this._lastEditToolArgs = undefined;
+			}
 		} else if (event.type === "tool_execution_update") {
 			const extensionEvent: ToolExecutionUpdateEvent = {
 				type: "tool_execution_update",
