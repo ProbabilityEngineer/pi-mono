@@ -11,7 +11,7 @@ import {
 	restoreLineEndings,
 	stripBom,
 } from "./edit-diff.js";
-import { applyHashlineEdits, type HashlineEditOperation } from "./hashline.js";
+import { type AffectedLineRange, applyHashlineEdits, type HashlineEditOperation } from "./hashline.js";
 import { resolveToCwd } from "./path-utils.js";
 
 const replaceEditSchema = Type.Object({
@@ -60,6 +60,8 @@ export interface EditToolDetails {
 	diff: string;
 	/** Line number of the first change in the new file (for editor navigation) */
 	firstChangedLine?: number;
+	/** Line ranges that need fresh hashes due to hash mismatch (for partial re-read) */
+	affectedLineRanges?: AffectedLineRange[];
 }
 
 /**
@@ -155,6 +157,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 					details: {
 						diff: diffResult.diff,
 						firstChangedLine: result.firstChangedLine ?? diffResult.firstChangedLine,
+						affectedLineRanges: result.affectedLineRanges,
 					},
 				};
 			}

@@ -5,7 +5,7 @@ import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile } from "fs/promises";
 import { formatDimensionNote, resizeImage } from "../../utils/image-resize.js";
 import { detectSupportedImageMimeTypeFromFile } from "../../utils/mime.js";
-import { formatHashLines } from "./hashline.js";
+import { type AffectedLineRange, formatHashLines } from "./hashline.js";
 import { resolveReadPath } from "./path-utils.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from "./truncate.js";
 
@@ -13,6 +13,14 @@ const readSchema = Type.Object({
 	path: Type.String({ description: "Path to the file to read (relative or absolute)" }),
 	offset: Type.Optional(Type.Number({ description: "Line number to start reading from (1-indexed)" })),
 	limit: Type.Optional(Type.Number({ description: "Maximum number of lines to read" })),
+	ranges: Type.Optional(
+		Type.Array(
+			Type.Object({
+				startLine: Type.Number({ description: "Start line of range (1-indexed, inclusive)" }),
+				endLine: Type.Number({ description: "End line of range (1-indexed, inclusive)" }),
+			}),
+		),
+	),
 });
 
 export type ReadToolInput = Static<typeof readSchema>;
@@ -63,7 +71,12 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 		parameters: readSchema,
 		execute: async (
 			_toolCallId: string,
-			{ path, offset, limit }: { path: string; offset?: number; limit?: number },
+			{
+				path,
+				offset,
+				limit,
+				ranges,
+			}: { path: string; offset?: number; limit?: number; ranges?: AffectedLineRange[] },
 			signal?: AbortSignal,
 		) => {
 			const lspNote = await options?.onPathAccess?.(path);
@@ -143,20 +156,34 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 								const allLines = textContent.split("\n");
 								const totalFileLines = allLines.length;
 
+								// Compute effective offset/limit from ranges (for partial re-read on hash mismatch)
+								let effectiveOffset = offset;
+								let effectiveLimit = limit;
+								if (ranges && ranges.length > 0) {
+									// Compute the span of all ranges
+									const minRangeStart = Math.min(...ranges.map((r) => r.startLine));
+									const maxRangeEnd = Math.max(...ranges.map((r) => r.endLine));
+									// Override offset/limit with range bounds
+									effectiveOffset = minRangeStart;
+									effectiveLimit = maxRangeEnd - minRangeStart + 1;
+								}
+
 								// Apply offset if specified (1-indexed to 0-indexed)
-								const startLine = offset ? Math.max(0, offset - 1) : 0;
+								const startLine = effectiveOffset ? Math.max(0, effectiveOffset - 1) : 0;
 								const startLineDisplay = startLine + 1; // For display (1-indexed)
 
 								// Check if offset is out of bounds
 								if (startLine >= allLines.length) {
-									throw new Error(`Offset ${offset} is beyond end of file (${allLines.length} lines total)`);
+									throw new Error(
+										`Offset ${effectiveOffset} is beyond end of file (${allLines.length} lines total)`,
+									);
 								}
 
-								// If limit is specified by user, use it; otherwise we'll let truncateHead decide
+								// If limit is specified by user (or computed from ranges), use it; otherwise we'll let truncateHead decide
 								let selectedContent: string;
 								let userLimitedLines: number | undefined;
-								if (limit !== undefined) {
-									const endLine = Math.min(startLine + limit, allLines.length);
+								if (effectiveLimit !== undefined) {
+									const endLine = Math.min(startLine + effectiveLimit, allLines.length);
 									selectedContent = allLines.slice(startLine, endLine).join("\n");
 									userLimitedLines = endLine - startLine;
 								} else {
