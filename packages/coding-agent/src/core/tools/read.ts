@@ -10,11 +10,10 @@ import { resolveReadPath } from "./path-utils.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateHead } from "./truncate.js";
 
 const readSchema = Type.Object({
-	ranges: Type.Optional(Type.Array(Type.Object({
-		start: Type.Number({ description: "Start line of range (1-indexed, inclusive)" }),
-		end: Type.Number({ description: "End line of range (1-indexed, inclusive)" }),
-	})),
+	path: Type.String({ description: "Path to the file to read (relative or absolute)" }),
+	offset: Type.Optional(Type.Number({ description: "Line number to start reading from (1-indexed)" })),
 	limit: Type.Optional(Type.Number({ description: "Maximum number of lines to read" })),
+});
 
 export type ReadToolInput = Static<typeof readSchema>;
 
@@ -44,10 +43,9 @@ const defaultReadOperations: ReadOperations = {
 export interface ReadToolOptions {
 	/** Whether to auto-resize images to 2000x2000 max. Default: true */
 	autoResizeImages?: boolean;
-	/** Whether text output should be prefixed as LINE#HASH|content. Default: false */
+	/** Whether text output should be prefixed as LINE:HASH|content. Default: false */
 	hashLines?: boolean;
-	/** Optional: read only specific line ranges for partial re-read on hash mismatch */
-	ranges?: AffectedLineRange[];
+	/** Optional callback invoked when this tool accesses a file path. */
 	onPathAccess?: (path: string) => Promise<string | undefined> | string | undefined;
 	/** Custom operations for file reading. Default: local filesystem */
 	operations?: ReadOperations;
@@ -61,7 +59,7 @@ export function createReadTool(cwd: string, options?: ReadToolOptions): AgentToo
 	return {
 		name: "read",
 		label: "read",
-		description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp). Images are sent as attachments. For text files, output is truncated to ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.${hashLines ? " In hashline mode, text lines are prefixed as LINE#HASH|content." : ""}`,
+		description: `Read the contents of a file. Supports text files and images (jpg, png, gif, webp). Images are sent as attachments. For text files, output is truncated to ${DEFAULT_MAX_LINES} lines or ${DEFAULT_MAX_BYTES / 1024}KB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.${hashLines ? " In hashline mode, text lines are prefixed as LINE:HASH|content." : ""}`,
 		parameters: readSchema,
 		execute: async (
 			_toolCallId: string,

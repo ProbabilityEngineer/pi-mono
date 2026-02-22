@@ -139,7 +139,7 @@ describe("lsp config field parity", () => {
 			);
 
 			const servers = loadLspServers(dir);
-			expect(servers["basedpyright"]).toBeUndefined();
+			expect(servers.basedpyright).toBeUndefined();
 			expect(servers["sourcekit-lsp"]?.command).toBe("sourcekit-lsp");
 		} finally {
 			if (previousAgentDir === undefined) {
