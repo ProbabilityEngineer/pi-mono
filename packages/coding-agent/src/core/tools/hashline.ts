@@ -10,6 +10,11 @@ export type HashlineEditOperation =
 	| { replace_lines: { start_anchor: string; end_anchor: string; new_text: string } }
 	| { insert_after: { anchor: string; text: string } };
 
+export interface AffectedLineRange {
+	startLine: number;
+	endLine: number;
+}
+
 const HASHLINE_REF_RE = /(\d+)#([0-9a-fA-F]+)/;
 const HASHLINE_TEXT_PREFIX_RE = /^\d+#[0-9a-fA-F]{2,}\|/;
 const HASH_HEX_LENGTH = 6;
@@ -84,7 +89,10 @@ function getMatchingLinesByHash(hash: string, fileLines: string[]): number[] {
 	return matches;
 }
 
-function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
+export function resolveLineRef(
+	ref: HashlineRef,
+	fileLines: string[],
+): { ref: HashlineRef; affectedRange: AffectedLineRange | undefined } {
 	if (fileLines.length === 0) {
 		throw new Error("Cannot apply hashline edits to an empty file.");
 	}
@@ -93,12 +101,19 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 	if (inRange) {
 		const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
 		if (hashMatches(ref.hash, actualHash)) {
-			return ref;
+			// No affected range needed - hash matches
+			return { ref, affectedRange: undefined };
 		}
 	}
 
-	const windowStart = Math.max(1, ref.line - RECOVERY_WINDOW);
-	const windowEnd = Math.min(fileLines.length, ref.line + RECOVERY_WINDOW);
+	// Determine affected range for hash mismatch recovery
+	const affectedRange: AffectedLineRange = {
+		startLine: Math.max(1, ref.line - RECOVERY_WINDOW),
+		endLine: Math.min(fileLines.length, ref.line + RECOVERY_WINDOW),
+	};
+
+	const windowStart = affectedRange.startLine;
+	const windowEnd = affectedRange.endLine;
 	const nearbyMatches: number[] = [];
 	for (let line = windowStart; line <= windowEnd; line++) {
 		if (hashMatches(ref.hash, computeLineHash(line, fileLines[line - 1]))) {
@@ -107,7 +122,7 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 	}
 
 	if (nearbyMatches.length === 1) {
-		return { line: nearbyMatches[0], hash: ref.hash };
+		return { ref: { line: nearbyMatches[0], hash: ref.hash }, affectedRange };
 	}
 	if (nearbyMatches.length > 1) {
 		throw new Error(
@@ -117,7 +132,7 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 
 	const allMatches = getMatchingLinesByHash(ref.hash, fileLines);
 	if (allMatches.length === 1) {
-		return { line: allMatches[0], hash: ref.hash };
+		return { ref: { line: allMatches[0], hash: ref.hash }, affectedRange };
 	}
 	if (allMatches.length > 1) {
 		throw new Error(
@@ -132,14 +147,43 @@ function resolveLineRef(ref: HashlineRef, fileLines: string[]): HashlineRef {
 	}
 	const actualHash = computeLineHash(ref.line, fileLines[ref.line - 1]);
 	throw new Error(
-		`Hash mismatch for line ${ref.line}. Expected ${ref.hash}, found ${actualHash}. Re-read the file and retry.`,
+		`Hash mismatch for line ${ref.line}. Expected ${ref.hash}, found ${actualHash}. Only lines ${affectedRange.startLine}-${affectedRange.endLine} need to be re-read.`,
 	);
+}
+
+export function mergeRanges(ranges: AffectedLineRange[]): AffectedLineRange[] {
+	if (ranges.length === 0) return [];
+
+	// Sort ranges by start line
+	const sorted = [...ranges].sort((a, b) => a.startLine - b.startLine);
+
+	const merged: AffectedLineRange[] = [];
+
+	for (const range of sorted) {
+		// Check overlap with last merged range
+		if (merged.length > 0) {
+			const last = merged[merged.length - 1];
+
+			if (range.startLine <= last.endLine) {
+				// Overlap: extend last range
+				last.endLine = Math.max(last.endLine, range.endLine);
+				continue;
+			}
+
+			// No overlap: add new range
+			merged.push(range);
+		} else {
+			merged.push(range);
+		}
+	}
+
+	return merged;
 }
 
 export function applyHashlineEdits(
 	content: string,
 	edits: HashlineEditOperation[],
-): { content: string; firstChangedLine: number | undefined } {
+): { content: string; firstChangedLine: number | undefined; affectedLineRanges?: AffectedLineRange[] } {
 	if (edits.length === 0) {
 		return { content, firstChangedLine: undefined };
 	}
@@ -147,23 +191,34 @@ export function applyHashlineEdits(
 	const originalLines = content.split("\n");
 	const nextLines = [...originalLines];
 	let firstChangedLine: number | undefined;
+	const allAffectedRanges: AffectedLineRange[] = [];
 
 	const parsedEdits = edits.map((edit, index) => {
 		if ("set_line" in edit) {
 			assertNoHashlinePrefixedContent(edit.set_line.new_text);
-			const ref = resolveLineRef(parseLineRef(edit.set_line.anchor), originalLines);
+			const { ref, affectedRange } = resolveLineRef(parseLineRef(edit.set_line.anchor), originalLines);
+			if (affectedRange) allAffectedRanges.push(affectedRange);
 			return { kind: "set_line" as const, ref, newText: edit.set_line.new_text, index };
 		}
 		if ("replace_lines" in edit) {
 			assertNoHashlinePrefixedContent(edit.replace_lines.new_text);
-			const startRef = resolveLineRef(parseLineRef(edit.replace_lines.start_anchor), originalLines);
-			const endRef = resolveLineRef(parseLineRef(edit.replace_lines.end_anchor), originalLines);
+			const { ref: startRef, affectedRange: startAffected } = resolveLineRef(
+				parseLineRef(edit.replace_lines.start_anchor),
+				originalLines,
+			);
+			const { ref: endRef, affectedRange: endAffected } = resolveLineRef(
+				parseLineRef(edit.replace_lines.end_anchor),
+				originalLines,
+			);
+			if (startAffected) allAffectedRanges.push(startAffected);
+			if (endAffected) allAffectedRanges.push(endAffected);
 			if (startRef.line > endRef.line) {
 				throw new Error(`Invalid range: start line ${startRef.line} is after end line ${endRef.line}.`);
 			}
 			return { kind: "replace_lines" as const, startRef, endRef, newText: edit.replace_lines.new_text, index };
 		}
-		const ref = resolveLineRef(parseLineRef(edit.insert_after.anchor), originalLines);
+		const { ref, affectedRange } = resolveLineRef(parseLineRef(edit.insert_after.anchor), originalLines);
+		if (affectedRange) allAffectedRanges.push(affectedRange);
 		if (edit.insert_after.text.length === 0) {
 			throw new Error("insert_after.text must not be empty.");
 		}
@@ -205,5 +260,10 @@ export function applyHashlineEdits(
 		firstChangedLine = firstChangedLine === undefined ? changedLine : Math.min(firstChangedLine, changedLine);
 	}
 
-	return { content: nextLines.join("\n"), firstChangedLine };
+	const mergedRanges = mergeRanges(allAffectedRanges);
+	return {
+		content: nextLines.join("\n"),
+		firstChangedLine,
+		affectedLineRanges: mergedRanges.length > 0 ? mergedRanges : undefined,
+	};
 }
