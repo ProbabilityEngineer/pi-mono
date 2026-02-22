@@ -245,5 +245,4 @@ describe("Hashline partial re-read automation", () => {
 			rmSync(tempDir, { recursive: true, force: true });
 		}
 	});
-
 });
