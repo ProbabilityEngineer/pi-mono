@@ -1,8 +1,71 @@
 #MODS
 
-Claude Code-like hooks were implemented to facilitate use with [Steve Yegge's Gastown](https://github.com/steveyegge/gastown).
-
-Hashline and LSP support were backported from [Can Bölük's Oh-My-Pi](https://github.com/can1357/oh-my-pi). You can toggle both in `/settings` (Hashline mode and LSP).
+ Summary: Changes Made to pi-mono                                                                                                                                                      
+                                                                                                                                                                                       
+ This document outlines features implemented in your pi-mono fork for backport to oh-my-pi:                                                                                            
+                                                                                                                                                                                       
+ ### 1. Hashline Editing                                                                                                                                                               
+                                                                                                                                                                                       
+ - Content-addressable editing using SHA1 hashes (6 hex chars) per line                                                                                                                
+ - Format: LINE#HASH|CONTENT (e.g., 12#a1b2c3|const x = 1;)                                                                                                                            
+ - Edit operations: set_line, replace_lines, insert_after                                                                                                                              
+ - Hash mismatch recovery: Searches ±8 line window, reports affected ranges for targeted re-read                                                                                       
+ - Settings toggle: edit.mode = "replace" | "hashline"                                                                                                                                 
+                                                                                                                                                                                       
+ ### 2. LSP Integration                                                                                                                                                                
+                                                                                                                                                                                       
+ - Full LSP client with diagnostics, hover, references, rename, format, symbols                                                                                                        
+ - Modules: client, api, config, installer, settings-state, encounter, planner, edits, render, probe, lspmux                                                                           
+ - Per-server settings: Enable/disable, install state, auto-enable/install on encounter                                                                                                
+ - Agent-guided installation: Detects language, suggests server, provides install command                                                                                              
+ - TypeScript tuning: Custom rootMarkers, isLinter flag                                                                                                                                
+ - Management tools: lspStatus(), lspReload(serverId)                                                                                                                                  
+                                                                                                                                                                                       
+ ### 3. ast-grep Support                                                                                                                                                               
+                                                                                                                                                                                       
+ - AST-based code search (faster than grep for structural queries)                                                                                                                     
+ - Tool API: pattern, path, language, include/exclude globs, rule YAML                                                                                                                 
+ - First-class built-in tool with auto-install detection                                                                                                                               
+                                                                                                                                                                                       
+ ### 4. Hooks System (Gastown)                                                                                                                                                         
+                                                                                                                                                                                       
+ - Hook events: SessionStart, PreToolUse, PostToolUse, PostToolUseFailure, PreCompact                                                                                                  
+ - Config sources (precedence): CLI config, project config, Claude settings, Gastown defaults                                                                                          
+ - Features: Timeout control, output truncation, invocation logging, sensitive value redaction                                                                                         
+ - Settings toggle: gastownMode (default: true)                                                                                                                                        
+                                                                                                                                                                                       
+ ### 5. Capability Policy Externalization                                                                                                                                              
+                                                                                                                                                                                       
+ - Skill-based policies moved from hardcoded to external templates                                                                                                                     
+ - Two tiers: Core-only (minimal) vs Detailed (full playbook)                                                                                                                          
+ - Auto-injection: Detects LSP/ast-grep availability, injects appropriate policy                                                                                                       
+ - Tool selection guidance: LSP vs ast-grep vs grep based on availability                                                                                                              
+ - Multiple refinements: Discovery-first lookup, bounded completeness, lexical backstop requirements                                                                                   
+                                                                                                                                                                                       
+ ### 6. Settings & Runtime                                                                                                                                                             
+                                                                                                                                                                                       
+ - Edit mode toggle: edit.mode = "replace" | "hashline"                                                                                                                                
+ - LSP settings: enabled, autoEnable, autoInstall, per-language toggles, per-server controls                                                                                           
+ - ast-grep settings: enabled toggle                                                                                                                                                   
+ - Live runtime rebuild: Settings changes trigger LSP reinit, tool capability refresh                                                                                                  
+                                                                                                                                                                                       
+ ### 7. Model Management                                                                                                                                                               
+                                                                                                                                                                                       
+ - Provider grouping: Models grouped by provider in /model selector                                                                                                                    
+ - Free-only filter: defaultModelFreeOnly setting or /freemodel command                                                                                                                
+                                                                                                                                                                                       
+ ### 8. Additional Features                                                                                                                                                            
+                                                                                                                                                                                       
+ - Slash command help: /help displays all available commands                                                                                                                           
+ - Bundled prompt templates: Load by default with external customization support                                                                                                       
+                                                                                                                                                                                       
+ ### 9. Current WIP: Smart Partial Re-read                                                                                                                                             
+                                                                                                                                                                                       
+ - Commit: 728e30db (in progress)                                                                                                                                                      
+ - Goal: On hash mismatch, only re-read affected line ranges instead of entire file                                                                                                    
+ - Implemented: affectedLineRanges in edit details, ranges param in read tool, mergeRanges() utility                                                                                   
+ - Missing: Automatic flow to trigger re-read after hash mismatch (3 options: agent-level automation, extension hook, capability policy integration)                                   
+ - Pending: Handle whitespace lines with repeating hashes
 
 Testing and Issues welcome!
 
