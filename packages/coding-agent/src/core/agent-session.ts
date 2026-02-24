@@ -2384,6 +2384,11 @@ export class AgentSession {
 			return;
 		}
 
+		// Guard against empty ranges - prevents Math.min/max from returning Infinity/-Infinity
+		if (ranges.length === 0) {
+			return;
+		}
+
 		const editPath = this._lastEditToolArgs.path;
 		const readTool = this._toolRegistry.get("read");
 		if (!readTool) {

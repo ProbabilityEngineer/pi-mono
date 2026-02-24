@@ -234,12 +234,20 @@ describe("Hashline partial re-read automation", () => {
 		});
 
 		try {
-			// @ts-expect-error - accessing private method for testing
-			await expect(session._triggerHashlineReRead([])).resolves.not.toThrow();
+			// Set up _lastEditToolArgs so the method has required state
+			// @ts-expect-error - accessing private property for testing
+			session._lastEditToolArgs = { path: testFile, args: {} };
 
-			const ranges = [{ startLine: 1, endLine: 5 }];
+			// Test with empty ranges - should return early without error
 			// @ts-expect-error - accessing private method for testing
-			await expect(session._triggerHashlineReRead(ranges)).resolves.not.toThrow();
+			await session._triggerHashlineReRead([]);
+
+			// Test with valid ranges - should execute read tool (will error due to invalid hashlines, but that's OK)
+			const ranges = [{ startLine: 1, endLine: 5 }];
+			// @ts-expect-error - accessing private property for testing
+			session._lastEditToolArgs = { path: testFile, args: {} };
+			// @ts-expect-error - accessing private method for testing
+			await session._triggerHashlineReRead(ranges);
 		} finally {
 			session.dispose();
 			rmSync(tempDir, { recursive: true, force: true });

@@ -118,7 +118,7 @@ describe("AgentSession auto-compaction queue resume", () => {
 		)._runAutoCompaction.bind(session);
 
 		await runAutoCompaction("threshold", false);
-		await vi.advanceTimersByTimeAsync(100);
+		await vi.advanceTimersByTime(100);
 
 		expect(continueSpy).toHaveBeenCalledTimes(1);
 	});

@@ -73,7 +73,7 @@ describe("AgentSession hashline read gating", () => {
 			expect(output).toContain("beta");
 			expect(output).not.toMatch(/^[0-9]+:[0-9a-f]{6}\|/m);
 			expect(grepOutput).toContain("example.txt:2: beta");
-			expect(grepOutput).not.toMatch(/example\.txt:2#[0-9a-f]{6}|beta/);
+			expect(grepOutput).not.toMatch(/example\.txt:2#[0-9a-f]{6}\|/);
 		} finally {
 			session.dispose();
 			rmSync(tempDir, { recursive: true, force: true });
